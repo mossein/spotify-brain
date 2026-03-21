@@ -60,6 +60,24 @@ The core of the project. It reads three layers of your data:
 /reading read my last few sessions          # Session analysis
 ```
 
+### The /reading-together Skill
+
+The relationship reading. Two people export their libraries and get a reading of the space between them.
+
+```bash
+# Each person exports their library
+python3 brain.py export    # Creates yourname-library.json
+
+# Share files with each other, then in Claude Code:
+/reading-together person1-library.json person2-library.json
+```
+
+This isn't a compatibility score. It reads what connects and separates two people through the most honest data they produce. It finds things like:
+- Whether you reach for the same artist for the same emotional reason or opposite ones
+- The doors one person holds that the other hasn't opened yet
+- Whether your shadow selves (unsaved obsessions) are more similar than your curated selves
+- The relational dynamic the two libraries reveal - who leads, who anchors, where the friction lives
+
 ### Library Pull
 Fetches your saved tracks, top artists and tracks (short/medium/long term), and recently played. Play history accumulates over time rather than overwriting, building a richer picture with each pull.
 

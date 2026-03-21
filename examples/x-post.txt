@@ -1,0 +1,13 @@
+POST 1:
+I built a tool that reads your Spotify library like a tarot reading.
+
+Fed 1,476 tracks to Claude. It found things I didn't know about myself.
+
+"When you're in pain, you don't reach for something that screams. You reach for something that glows."
+
+POST 2 (reply):
+It also reads the gap between what you save and what you play on repeat. Turns out the songs you never save are the most honest data you have.
+
+"Your saved library is a statement: this is who I am. These unsaved obsessions are the question underneath: but is it?"
+
+Open source: github.com/mossein/spotify-brain

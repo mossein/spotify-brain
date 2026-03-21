@@ -59,6 +59,11 @@ def cmd_match(args):
     match_fingerprints(args.file)
 
 
+def cmd_export(args):
+    from export import export
+    export()
+
+
 def cmd_dump(args):
     from utils import DATA_DIR
     data = {}
@@ -94,6 +99,7 @@ def main():
     match_p = sub.add_parser("match", help="Compare taste with someone else")
     match_p.add_argument("file", help="Path to the other person's fingerprint.json")
 
+    sub.add_parser("export", help="Export library for relationship readings")
     sub.add_parser("dump", help="Dump raw cached data as JSON")
 
     args = parser.parse_args()
@@ -113,6 +119,7 @@ def main():
         "discover": cmd_discover,
         "fingerprint": cmd_fingerprint,
         "match": cmd_match,
+        "export": cmd_export,
         "dump": cmd_dump,
     }
     commands[args.command](args)

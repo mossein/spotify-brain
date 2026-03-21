@@ -1,0 +1,24 @@
+Title: I built a Claude Code skill that reads your Spotify library like a tarot reading
+
+Body:
+
+Built a /reading slash command for Claude Code that pulls your full Spotify library and does a deep personal reading of your music taste. Not stats - it actually ingests all your data and thinks about what it finds.
+
+It reads three layers:
+- What you saved (the curated self)
+- What you actually play on repeat (more honest)
+- Songs you play obsessively but never save (the most revealing)
+
+Some of what it found from my 1,476 tracks:
+
+> "Your entire library is tuned to a specific quality of light. Not sound - light. The golden hour. The question you're always asking, the filter everything passes through: does this glow?"
+
+> "Your saved library is a statement: this is who I am. These unsaved obsessions are the question underneath: but is it?"
+
+> "The circuit you ran twice tonight - that's not a playlist. That's an emotional breath. And you needed two breaths."
+
+The skill definition is just a markdown file that teaches Claude how to read music data. No hardcoded analysis - every reading is different.
+
+Open source: https://github.com/mossein/spotify-brain
+
+The interesting part for this community is the .claude/commands/reading.md file - it's a good example of how to write a skill that does genuine analysis rather than template filling.

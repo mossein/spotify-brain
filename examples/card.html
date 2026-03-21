@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body {
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: #0a0a0a;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  .card {
+    width: 680px;
+    background: linear-gradient(145deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    border-radius: 20px;
+    padding: 48px 52px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 120px rgba(30,60,120,0.15);
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(255,180,80,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 36px;
+    opacity: 0.6;
+  }
+  .header svg {
+    width: 22px;
+    height: 22px;
+  }
+  .header span {
+    font-size: 14px;
+    color: #8892b0;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .quote {
+    font-size: 22px;
+    line-height: 1.65;
+    color: #ccd6f6;
+    font-weight: 400;
+    margin-bottom: 32px;
+  }
+  .quote em {
+    color: #ffd699;
+    font-style: normal;
+  }
+  .meta {
+    font-size: 13px;
+    color: #4a5568;
+    letter-spacing: 1px;
+  }
+  .meta a {
+    color: #64ffda;
+    text-decoration: none;
+  }
+  .stats {
+    display: flex;
+    gap: 32px;
+    margin-bottom: 28px;
+    padding-bottom: 28px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .stat {
+    text-align: left;
+  }
+  .stat-num {
+    font-size: 28px;
+    font-weight: 700;
+    color: #e6f1ff;
+  }
+  .stat-label {
+    font-size: 11px;
+    color: #5a6a8a;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-top: 2px;
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#64ffda" stroke-width="1.5">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+        <line x1="9" y1="9" x2="9.01" y2="9"/>
+        <line x1="15" y1="9" x2="15.01" y2="9"/>
+      </svg>
+      <span>spotify-brain /reading</span>
+    </div>
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-num">1,476</div>
+        <div class="stat-label">tracks analyzed</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">10</div>
+        <div class="stat-label">years of saves</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">1,514</div>
+        <div class="stat-label">unique artists</div>
+      </div>
+    </div>
+    <div class="quote">
+      "Your library has almost no anger in it. When you're in pain, you don't reach for something that screams. You reach for something that <em>glows</em>. That's not a preference. That's a worldview."
+    </div>
+    <div class="meta">
+      github.com/mossein/spotify-brain
+    </div>
+  </div>
+</body>
+</html>
