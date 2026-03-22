@@ -35,47 +35,70 @@ body.has-ambient {
     overflow-x: hidden;
 }
 
-body.has-ambient::before,
-body.has-ambient::after {
-    content: '';
+body.has-ambient .ambient-bg {
     position: fixed;
-    width: 600px;
-    height: 600px;
-    border-radius: 50%;
-    filter: blur(120px);
+    top: 0; left: 0; right: 0; bottom: 0;
     pointer-events: none;
     z-index: 0;
+    overflow: hidden;
 }
 
-body.has-ambient::before {
-    background: rgba(200, 140, 40, 0.07);
-    animation: blob1 12s ease-in-out infinite;
+body.has-ambient .ambient-bg .blob {
+    position: absolute;
+    border-radius: 50%;
 }
 
-body.has-ambient::after {
-    background: rgba(180, 100, 30, 0.05);
-    animation: blob2 15s ease-in-out infinite;
+body.has-ambient .ambient-bg .blob-1 {
+    width: 70vmax;
+    height: 70vmax;
+    background: radial-gradient(circle, rgba(210, 140, 30, 0.07) 0%, rgba(210, 140, 30, 0.02) 40%, transparent 70%);
+    animation: drift1 18s ease-in-out infinite;
 }
 
-body.has-ambient > * {
+body.has-ambient .ambient-bg .blob-2 {
+    width: 60vmax;
+    height: 60vmax;
+    background: radial-gradient(circle, rgba(220, 100, 20, 0.06) 0%, rgba(220, 100, 20, 0.015) 40%, transparent 70%);
+    animation: drift2 22s ease-in-out infinite;
+}
+
+body.has-ambient .ambient-bg .blob-3 {
+    width: 50vmax;
+    height: 50vmax;
+    background: radial-gradient(circle, rgba(200, 160, 60, 0.05) 0%, rgba(200, 160, 60, 0.01) 40%, transparent 70%);
+    animation: drift3 25s ease-in-out infinite;
+}
+
+body.has-ambient > *:not(.ambient-bg) {
     position: relative;
     z-index: 1;
 }
 
-@keyframes blob1 {
-    0% { top: -200px; left: -200px; }
-    25% { top: 30%; left: 60%; }
-    50% { top: 70%; left: 30%; }
-    75% { top: 20%; left: -10%; }
-    100% { top: -200px; left: -200px; }
+@keyframes drift1 {
+    0% { top: -30%; left: -20%; }
+    20% { top: 10%; left: 50%; }
+    40% { top: 50%; left: 70%; }
+    60% { top: 70%; left: 20%; }
+    80% { top: 30%; left: -10%; }
+    100% { top: -30%; left: -20%; }
 }
 
-@keyframes blob2 {
-    0% { top: 80%; right: -200px; left: auto; }
-    25% { top: 10%; right: 10%; left: auto; }
-    50% { top: -100px; right: 50%; left: auto; }
-    75% { top: 60%; right: 70%; left: auto; }
-    100% { top: 80%; right: -200px; left: auto; }
+@keyframes drift2 {
+    0% { top: 80%; left: 70%; }
+    20% { top: 40%; left: 20%; }
+    40% { top: -10%; left: 40%; }
+    60% { top: 20%; left: 80%; }
+    80% { top: 60%; left: 50%; }
+    100% { top: 80%; left: 70%; }
+}
+
+@keyframes drift3 {
+    0% { top: 20%; left: 40%; }
+    20% { top: 60%; left: -10%; }
+    40% { top: 80%; left: 50%; }
+    60% { top: 10%; left: 70%; }
+    80% { top: -20%; left: 30%; }
+    100% { top: 20%; left: 40%; }
 }
 
 /* --- Animations --- */
