@@ -29,6 +29,24 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
+body.has-ambient {
+    background:
+        radial-gradient(ellipse 80% 60% at 20% 80%, rgba(180, 120, 40, 0.04) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 80% at 80% 20%, rgba(200, 150, 50, 0.03) 0%, transparent 70%),
+        radial-gradient(ellipse 90% 50% at 50% 50%, rgba(160, 100, 30, 0.02) 0%, transparent 80%),
+        var(--bg);
+    background-size: 200% 200%, 200% 200%, 200% 200%, 100% 100%;
+    animation: ambientShift 20s ease-in-out infinite;
+}
+
+@keyframes ambientShift {
+    0% { background-position: 0% 50%, 100% 50%, 50% 0%, 0% 0%; }
+    25% { background-position: 30% 80%, 70% 20%, 80% 30%, 0% 0%; }
+    50% { background-position: 100% 50%, 0% 50%, 50% 100%, 0% 0%; }
+    75% { background-position: 70% 20%, 30% 80%, 20% 70%, 0% 0%; }
+    100% { background-position: 0% 50%, 100% 50%, 50% 0%, 0% 0%; }
+}
+
 /* --- Animations --- */
 @keyframes fadeUp {
     from { opacity: 0; transform: translateY(30px); }
