@@ -232,8 +232,8 @@ def spotify_api(token, endpoint, params=None):
     if resp.status_code == 429:
         time.sleep(int(resp.headers.get("Retry-After", 2)))
         return spotify_api(token, endpoint, params)
-    if resp.status_code == 401:
-        raise SpotifyAuthError("Spotify token expired or invalid")
+    if resp.status_code in (401, 403):
+        raise SpotifyAuthError(f"Spotify API {resp.status_code}: {resp.text}")
     resp.raise_for_status()
     return resp.json()
 
