@@ -300,6 +300,125 @@ class LibraryProfile:
 
         self.alltime_recency = recent_in_alltime / max(len(self.top_long), 1) * 100
 
+        # Compute archetype
+        self._compute_archetype()
+
+    def _compute_archetype(self):
+        """Classify into a music archetype based on computed metrics."""
+
+        # Axis 1: Time - when do they listen / save?
+        if self.late_night_pct > 25:
+            self.time_axis = "Nocturnal"
+            self.time_desc = "comes alive after midnight"
+        elif self.late_night_pct > 10:
+            self.time_axis = "Twilight"
+            self.time_desc = "lives in the golden hour"
+        else:
+            self.time_axis = "Daylight"
+            self.time_desc = "listens in the open"
+
+        # Axis 2: Depth - how do they explore?
+        if self.one_track_pct > 75:
+            self.depth_axis = "Drifter"
+            self.depth_desc = "always moving, never settling"
+        elif self.top10_loyalty > 30:
+            self.depth_axis = "Devotee"
+            self.depth_desc = "goes all in on what they love"
+        else:
+            self.depth_axis = "Cartographer"
+            self.depth_desc = "maps the territory between deep and wide"
+
+        # Axis 3: Time direction - past vs present
+        if self.nostalgia_trend > 5 and self.current_nostalgia > 10:
+            self.direction_axis = "Excavator"
+            self.direction_desc = "digging deeper into the past each year"
+        elif self.current_nostalgia > 8:
+            self.direction_axis = "Archivist"
+            self.direction_desc = "curates from across the decades"
+        elif self.alltime_recency > 60:
+            self.direction_axis = "Accelerator"
+            self.direction_desc = "more alive musically right now than ever"
+        else:
+            self.direction_axis = "Navigator"
+            self.direction_desc = "moves freely between past and present"
+
+        # Axis 4: Curation style - save vs play gap
+        if self.unsaved_pct > 15:
+            self.curation_axis = "Phantom"
+            self.curation_desc = "plays songs they won't claim as their own"
+        elif self.unsaved_pct > 5:
+            self.curation_axis = "Filter"
+            self.curation_desc = "selective about what enters the permanent collection"
+        else:
+            self.curation_axis = "Collector"
+            self.curation_desc = "saves everything they love"
+
+        # Axis 5: Emotional register
+        if self.anger_index < 1 and self.explicit_pct < 12:
+            self.emotion_axis = "Luminist"
+            self.emotion_desc = "processes everything through beauty"
+        elif self.explicit_pct > 25:
+            self.emotion_axis = "Realist"
+            self.emotion_desc = "doesn't filter the raw edges"
+        elif self.long_track_pct > 10:
+            self.emotion_axis = "Contemplative"
+            self.emotion_desc = "patient with the slow burn"
+        else:
+            self.emotion_axis = "Kinetic"
+            self.emotion_desc = "needs forward motion"
+
+        # Compound archetype: primary + secondary
+        # Primary is the most distinctive axis (furthest from center)
+        axes = [
+            (self.time_axis, self.time_desc, self._axis_strength("time")),
+            (self.depth_axis, self.depth_desc, self._axis_strength("depth")),
+            (self.direction_axis, self.direction_desc, self._axis_strength("direction")),
+            (self.curation_axis, self.curation_desc, self._axis_strength("curation")),
+            (self.emotion_axis, self.emotion_desc, self._axis_strength("emotion")),
+        ]
+        axes.sort(key=lambda x: -x[2])
+
+        self.archetype_primary = axes[0][0]
+        self.archetype_secondary = axes[1][0]
+        self.archetype = f"{axes[0][0]} {axes[1][0]}"
+        self.archetype_desc_primary = axes[0][1]
+        self.archetype_desc_secondary = axes[1][1]
+
+        # All axes for the radar chart
+        self.archetype_axes = {
+            "time": self.time_axis,
+            "depth": self.depth_axis,
+            "direction": self.direction_axis,
+            "curation": self.curation_axis,
+            "emotion": self.emotion_axis,
+        }
+
+        # Radar values (0-1 scale for visualization)
+        self.radar = {
+            "nocturnal": min(self.late_night_pct / 40, 1.0),
+            "loyalty": min(self.top10_loyalty / 50, 1.0),
+            "nostalgia": min(self.current_nostalgia / 20, 1.0),
+            "shadow": min(self.unsaved_pct / 20, 1.0),
+            "patience": min(self.long_track_pct / 15, 1.0),
+            "exploration": min(self.one_track_pct / 90, 1.0),
+            "acceleration": min(self.alltime_recency / 80, 1.0),
+            "rawness": min(self.explicit_pct / 30, 1.0),
+        }
+
+    def _axis_strength(self, axis):
+        """How distinctive is this axis? Higher = more extreme."""
+        if axis == "time":
+            return abs(self.late_night_pct - 12)  # 12% is "average"
+        elif axis == "depth":
+            return max(self.one_track_pct - 50, self.top10_loyalty - 15)
+        elif axis == "direction":
+            return max(abs(self.nostalgia_trend), self.alltime_recency - 30)
+        elif axis == "curation":
+            return self.unsaved_pct * 2
+        elif axis == "emotion":
+            return max(10 - self.anger_index * 5, self.long_track_pct, abs(self.explicit_pct - 15))
+        return 0
+
 
 # ---------------------------------------------------------------------------
 # Relationship analysis
@@ -468,6 +587,9 @@ class NarrativeEngine:
         """Generate insights for a single library."""
         insights = []
 
+        # Archetype (first - the headline)
+        insights.append(self._archetype_insight(profile))
+
         # Identity
         insights.append(self._identity_insight(profile))
 
@@ -494,6 +616,9 @@ class NarrativeEngine:
         b = analysis.b
         insights = []
 
+        # Archetype pairing (first)
+        insights.append(self._archetype_pairing_insight(analysis))
+
         # The connection
         insights.append(self._connection_insight(analysis))
 
@@ -518,6 +643,81 @@ class NarrativeEngine:
         return [i for i in insights if i]
 
     # --- Single library narrative blocks ---
+
+    def _archetype_insight(self, p):
+        return {
+            "type": "archetype",
+            "title": p.archetype,
+            "body": (
+                f"{p.user} is a {p.archetype}. "
+                f"{p.archetype_desc_primary.capitalize()} and {p.archetype_desc_secondary}. "
+                f"Full signature: "
+                f"{p.time_axis} / {p.depth_axis} / {p.direction_axis} / "
+                f"{p.curation_axis} / {p.emotion_axis}."
+            ),
+            "archetype": p.archetype,
+            "axes": p.archetype_axes,
+            "radar": p.radar,
+        }
+
+    def _archetype_pairing_insight(self, r):
+        a = r.a
+        b = r.b
+
+        # Find shared and different axes
+        shared_axes = []
+        different_axes = []
+        for axis in ["time", "depth", "direction", "curation", "emotion"]:
+            a_val = a.archetype_axes[axis]
+            b_val = b.archetype_axes[axis]
+            if a_val == b_val:
+                shared_axes.append(a_val)
+            else:
+                different_axes.append((axis, a_val, b_val))
+
+        parts = [
+            f"A {a.archetype} and a {b.archetype}."
+        ]
+
+        if shared_axes:
+            parts.append(
+                f"They share: {', '.join(shared_axes).lower()}. "
+                f"These are the frequencies where they naturally sync."
+            )
+
+        if different_axes:
+            tensions = []
+            for axis, a_val, b_val in different_axes:
+                tensions.append(f"{a.user} is a {a_val}, {b.user} is a {b_val}")
+            parts.append(
+                f"Where they diverge: {'. '.join(tensions)}. "
+                f"The tension between these positions is where the relationship lives."
+            )
+
+        # Specific pairings that are interesting
+        if a.archetype_primary == b.archetype_primary:
+            parts.append(
+                f"Same primary type. They recognize each other immediately - "
+                f"for better and worse. Mirror energy."
+            )
+        elif (a.archetype_primary in ("Excavator", "Archivist") and
+              b.archetype_primary in ("Accelerator", "Navigator")) or \
+             (b.archetype_primary in ("Excavator", "Archivist") and
+              a.archetype_primary in ("Accelerator", "Navigator")):
+            past_person = a.user if a.archetype_primary in ("Excavator", "Archivist") else b.user
+            now_person = b.user if past_person == a.user else a.user
+            parts.append(
+                f"{past_person} pulls from the past, {now_person} lives in the now. "
+                f"Together they cover the full timeline. "
+                f"{past_person} shows {now_person} where it all came from. "
+                f"{now_person} shows {past_person} where it's going."
+            )
+
+        return {
+            "type": "archetype_pairing",
+            "title": f"{a.archetype} meets {b.archetype}",
+            "body": " ".join(parts),
+        }
 
     def _identity_insight(self, p):
         if p.one_track_pct > 75:

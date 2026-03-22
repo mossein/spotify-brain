@@ -5,6 +5,110 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ reading.person_a.user }} & {{ reading.person_b.user }} - spotify-brain</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* Overlap visualization */
+        .overlap-viz {
+            padding: 48px 0;
+            text-align: center;
+        }
+        .venn {
+            position: relative;
+            height: 200px;
+            margin: 0 auto 24px;
+            max-width: 400px;
+        }
+        .venn-circle {
+            position: absolute;
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        .venn-a {
+            left: 40px;
+            background: rgba(100, 255, 218, 0.08);
+            border: 1px solid rgba(100, 255, 218, 0.2);
+        }
+        .venn-b {
+            right: 40px;
+            background: rgba(255, 107, 157, 0.08);
+            border: 1px solid rgba(255, 107, 157, 0.2);
+        }
+        .venn-center {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2;
+            text-align: center;
+        }
+        .venn-center .number {
+            font-family: var(--serif);
+            font-size: 2.8em;
+            font-style: italic;
+            color: var(--accent);
+            line-height: 1;
+        }
+        .venn-center .sub {
+            font-family: var(--mono);
+            font-size: 0.6em;
+            color: var(--text-dim);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+        .venn-label {
+            font-family: var(--mono);
+            font-size: 0.65em;
+            color: var(--text-dim);
+            letter-spacing: 1px;
+        }
+        .venn-num {
+            font-family: var(--serif);
+            font-size: 1.4em;
+            font-style: italic;
+            color: var(--text-secondary);
+        }
+
+        /* Comparison stats */
+        .compare-grid {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 1px;
+            margin: 48px 0;
+        }
+        .compare-row {
+            display: contents;
+        }
+        .compare-val {
+            padding: 16px 0;
+            text-align: center;
+            font-family: var(--serif);
+            font-size: 1.4em;
+            font-style: italic;
+            color: var(--text);
+        }
+        .compare-val.a { color: #64ffda; text-align: right; padding-right: 24px; }
+        .compare-val.b { color: #ff6b9d; text-align: left; padding-left: 24px; }
+        .compare-label {
+            padding: 16px 12px;
+            text-align: center;
+            font-family: var(--mono);
+            font-size: 0.6em;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-left: 1px solid var(--border);
+            border-right: 1px solid var(--border);
+        }
+    </style>
 </head>
 <body>
     <nav class="nav">
@@ -16,41 +120,117 @@
     </nav>
 
     <div class="container">
-        <div class="together-header">
-            <h1>Relationship Reading</h1>
-            <div class="vs">
-                <span class="name">{{ reading.person_a.user }}</span>
-                &
-                <span class="name">{{ reading.person_b.user }}</span>
+        <div class="together-hero animate-in">
+            <div class="together-label">Relationship reading</div>
+            <div class="together-names">
+                {{ reading.person_a.user }}
+                <span class="amp">and</span>
+                {{ reading.person_b.user }}
             </div>
         </div>
 
-        <!-- Relationship insights first - the main event -->
-        <div class="section-label relationship">The space between</div>
+        <!-- Overlap visualization -->
+        <div class="overlap-viz animate-in">
+            <div class="venn">
+                <div class="venn-circle venn-a">
+                    <div class="venn-num">{{ total_a }}</div>
+                    <div class="venn-label">artists</div>
+                </div>
+                <div class="venn-circle venn-b">
+                    <div class="venn-num">{{ total_b }}</div>
+                    <div class="venn-label">artists</div>
+                </div>
+                <div class="venn-center">
+                    <div class="number">{{ shared_count }}</div>
+                    <div class="sub">shared</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Side by side comparison -->
+        <div class="compare-grid animate-in">
+            <div class="compare-row">
+                <div class="compare-val a">{{ vis_a.total }}</div>
+                <div class="compare-label">tracks</div>
+                <div class="compare-val b">{{ vis_b.total }}</div>
+            </div>
+            <div class="compare-row">
+                <div class="compare-val a">{{ vis_a.unique_artists }}</div>
+                <div class="compare-label">artists</div>
+                <div class="compare-val b">{{ vis_b.unique_artists }}</div>
+            </div>
+            <div class="compare-row">
+                <div class="compare-val a">{{ vis_a.span_years }}y</div>
+                <div class="compare-label">span</div>
+                <div class="compare-val b">{{ vis_b.span_years }}y</div>
+            </div>
+            <div class="compare-row">
+                <div class="compare-val a">{{ vis_a.explicit_pct }}%</div>
+                <div class="compare-label">explicit</div>
+                <div class="compare-val b">{{ vis_b.explicit_pct }}%</div>
+            </div>
+            <div class="compare-row">
+                <div class="compare-val a">{{ vis_a.collab_pct }}%</div>
+                <div class="compare-label">collabs</div>
+                <div class="compare-val b">{{ vis_b.collab_pct }}%</div>
+            </div>
+        </div>
+
+        <!-- The relationship reading -->
+        <div class="section-divider animate-in">
+            <span class="label relationship">The space between</span>
+        </div>
+
         {% for insight in reading.relationship %}
-        <div class="insight">
-            <div class="insight-type">{{ insight.type }}</div>
+        <div class="insight animate-in">
+            <span class="insight-label">{{ insight.type }}</span>
+            {% if insight.title %}
+            <div class="insight-title">{{ insight.title }}</div>
+            {% endif %}
             <div class="insight-body">{{ insight.body }}</div>
         </div>
         {% endfor %}
 
         <!-- Person A -->
-        <div class="section-label person-a">{{ reading.person_a.user }}</div>
+        <div class="section-divider animate-in">
+            <span class="label person-a">{{ reading.person_a.user }}</span>
+        </div>
+
         {% for insight in reading.person_a.insights %}
-        <div class="insight">
-            <div class="insight-type">{{ insight.type }}</div>
+        <div class="insight animate-in">
+            <span class="insight-label">{{ insight.type }}</span>
+            <div class="insight-title">{{ insight.title }}</div>
             <div class="insight-body">{{ insight.body }}</div>
         </div>
         {% endfor %}
 
         <!-- Person B -->
-        <div class="section-label person-b">{{ reading.person_b.user }}</div>
+        <div class="section-divider animate-in">
+            <span class="label person-b">{{ reading.person_b.user }}</span>
+        </div>
+
         {% for insight in reading.person_b.insights %}
-        <div class="insight">
-            <div class="insight-type">{{ insight.type }}</div>
+        <div class="insight animate-in">
+            <span class="insight-label">{{ insight.type }}</span>
+            <div class="insight-title">{{ insight.title }}</div>
             <div class="insight-body">{{ insight.body }}</div>
         </div>
         {% endfor %}
     </div>
+
+    <script>
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.animationPlayState = 'running';
+            }
+        });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.animate-in').forEach(el => {
+        el.style.animationPlayState = 'paused';
+        observer.observe(el);
+    });
+    </script>
 </body>
 </html>

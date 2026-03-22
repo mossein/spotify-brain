@@ -8,6 +8,7 @@ import secrets
 import sqlite3
 import sys
 import time
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlencode
@@ -71,6 +72,68 @@ def init_db():
 
 
 init_db()
+
+# ---------------------------------------------------------------------------
+# Visual data computation
+# ---------------------------------------------------------------------------
+
+def _compute_visuals(library):
+    """Compute data for frontend visualizations."""
+    saved = library.get("saved_tracks", [])
+    stats = library.get("stats", {})
+    top_long = library.get("top_tracks", {}).get("long_term", [])
+
+    # Decade distribution (for arc chart)
+    decades = stats.get("decade_distribution", {})
+    total_dec = sum(decades.values()) or 1
+    decade_data = [{"label": d, "value": round(c / total_dec * 100)}
+                   for d, c in sorted(decades.items()) if c / total_dec > 0.01]
+
+    # Monthly save activity (sparkline)
+    monthly = stats.get("monthly_saves", {})
+    monthly_vals = [{"month": m, "count": c} for m, c in sorted(monthly.items())]
+
+    # Top artists with counts (for horizontal bars)
+    top_artists = stats.get("top_saved_artists", [])[:10]
+
+    # Key stats
+    total = stats.get("total_saved", 0)
+    unique = stats.get("unique_artists", 0)
+    explicit_pct = stats.get("explicit_pct", 0)
+
+    # Unsaved count
+    unsaved = len([t for t in top_long if not t.get("saved", True)])
+
+    # Library span
+    dates = [t.get("added", "") for t in saved if t.get("added")]
+    if dates:
+        first = min(dates)
+        last = max(dates)
+        try:
+            span_years = (datetime.strptime(last, "%Y-%m-%d") - datetime.strptime(first, "%Y-%m-%d")).days / 365
+        except ValueError:
+            span_years = 0
+    else:
+        first = last = ""
+        span_years = 0
+
+    # Collab rate
+    collab = sum(1 for t in saved if "," in t.get("artists", ""))
+    collab_pct = round(collab / max(total, 1) * 100)
+
+    return {
+        "decades": decade_data,
+        "monthly": monthly_vals,
+        "top_artists": top_artists,
+        "total": total,
+        "unique_artists": unique,
+        "explicit_pct": explicit_pct,
+        "unsaved_count": unsaved,
+        "span_years": round(span_years, 1),
+        "collab_pct": collab_pct,
+        "first_save": first,
+    }
+
 
 # ---------------------------------------------------------------------------
 # Spotify OAuth + API helpers
@@ -191,7 +254,6 @@ def pull_library(token):
         for a in t["artists"].split(", "):
             artist_counts[a.strip()] += 1
 
-    from collections import Counter
     decade_dist = Counter()
     for t in saved_tracks:
         y = t.get("year", "")
@@ -258,7 +320,6 @@ def callback():
     session["access_token"] = access_token
 
     # Pull library
-    from collections import Counter
     user_id, display_name, library_data = pull_library(access_token)
 
     # Generate insights
@@ -321,12 +382,15 @@ def profile():
 
     db.close()
 
+    visuals = _compute_visuals(library)
+
     return render_template("profile.html",
                           user=user,
                           insights=insights,
                           library=library,
                           share_url=share_url,
-                          pairings=pairings)
+                          pairings=pairings,
+                          visuals=visuals)
 
 
 @app.route("/pair/<code>")
@@ -399,10 +463,27 @@ def together(user_a, user_b):
 
     db.close()
 
+    lib_a = json.loads(ua["library_data"])
+    lib_b = json.loads(ub["library_data"])
+    vis_a = _compute_visuals(lib_a)
+    vis_b = _compute_visuals(lib_b)
+
+    # Overlap stats
+    artists_a = set(a.strip() for t in lib_a.get("saved_tracks", []) for a in t.get("artists", "").split(","))
+    artists_b = set(a.strip() for t in lib_b.get("saved_tracks", []) for a in t.get("artists", "").split(","))
+    shared = artists_a & artists_b
+    overlap_pct = round(len(shared) / max(len(artists_a | artists_b), 1) * 100)
+
     return render_template("together.html",
                           reading=reading,
                           user_a=ua,
-                          user_b=ub)
+                          user_b=ub,
+                          vis_a=vis_a,
+                          vis_b=vis_b,
+                          overlap_pct=overlap_pct,
+                          shared_count=len(shared),
+                          total_a=len(artists_a),
+                          total_b=len(artists_b))
 
 
 @app.route("/logout")

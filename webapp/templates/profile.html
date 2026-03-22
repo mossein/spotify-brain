@@ -5,6 +5,187 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ user.display_name }} - spotify-brain</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1px;
+            background: var(--border);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            margin-bottom: 48px;
+        }
+        .stat-cell {
+            background: var(--surface);
+            padding: 28px 20px;
+            text-align: center;
+        }
+        .stat-cell .number {
+            font-family: var(--serif);
+            font-size: 2.2em;
+            font-style: italic;
+            color: var(--accent);
+            line-height: 1;
+            margin-bottom: 6px;
+        }
+        .stat-cell .label {
+            font-family: var(--mono);
+            font-size: 0.6em;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--text-dim);
+        }
+
+        /* Decade bar */
+        .decade-viz {
+            margin: 48px 0;
+        }
+        .decade-viz .title {
+            font-family: var(--mono);
+            font-size: 0.65em;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 16px;
+        }
+        .decade-bar {
+            display: flex;
+            height: 48px;
+            border-radius: 8px;
+            overflow: hidden;
+            gap: 2px;
+        }
+        .decade-segment {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7em;
+            font-family: var(--mono);
+            color: rgba(0,0,0,0.7);
+            font-weight: 500;
+            transition: flex 0.5s ease;
+            position: relative;
+            min-width: 0;
+        }
+        .decade-segment:hover {
+            filter: brightness(1.2);
+        }
+        .decade-segment .tip {
+            position: absolute;
+            top: -32px;
+            background: #fff;
+            color: #000;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+        }
+        .decade-segment:hover .tip {
+            opacity: 1;
+        }
+
+        /* Activity sparkline */
+        .activity-viz {
+            margin: 48px 0;
+        }
+        .activity-viz .title {
+            font-family: var(--mono);
+            font-size: 0.65em;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 16px;
+        }
+        .sparkline-container {
+            height: 80px;
+            display: flex;
+            align-items: flex-end;
+            gap: 1px;
+        }
+        .spark-bar {
+            flex: 1;
+            background: var(--warm);
+            border-radius: 2px 2px 0 0;
+            min-height: 2px;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+            position: relative;
+        }
+        .spark-bar:hover {
+            opacity: 1;
+        }
+        .spark-bar .spark-tip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #fff;
+            color: #000;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.65em;
+            font-family: var(--mono);
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+            margin-bottom: 4px;
+        }
+        .spark-bar:hover .spark-tip {
+            opacity: 1;
+        }
+
+        /* Top artists horizontal bars */
+        .artist-bars {
+            margin: 48px 0;
+        }
+        .artist-bars .title {
+            font-family: var(--mono);
+            font-size: 0.65em;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 16px;
+        }
+        .artist-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 6px;
+        }
+        .artist-name {
+            width: 140px;
+            text-align: right;
+            font-size: 0.8em;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .artist-bar-track {
+            flex: 1;
+            height: 24px;
+            background: var(--surface-2);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .artist-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, rgba(100,255,218,0.3), rgba(100,255,218,0.6));
+            border-radius: 4px;
+            transition: width 1s ease;
+        }
+        .artist-count {
+            width: 30px;
+            font-family: var(--mono);
+            font-size: 0.7em;
+            color: var(--text-dim);
+        }
+    </style>
 </head>
 <body>
     <nav class="nav">
@@ -15,54 +196,215 @@
     </nav>
 
     <div class="container">
-        <div class="profile-header">
-            <div>
-                <h1>{{ user.display_name }}</h1>
-                <div class="meta">{{ library.stats.total_saved }} tracks | {{ library.stats.unique_artists }} artists</div>
+        <div class="profile-hero animate-in">
+            <div class="profile-name">{{ user.display_name }}</div>
+            <div class="profile-meta">{{ visuals.first_save[:4] if visuals.first_save else '' }} - present</div>
+        </div>
+
+        <!-- Archetype hero -->
+        {% set arch = insights[0] if insights and insights[0].type == 'archetype' else None %}
+        {% if arch %}
+        <div class="animate-in" style="text-align: center; padding: 40px 0 48px;">
+            <div style="font-family: var(--mono); font-size: 0.6em; letter-spacing: 4px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 16px;">Your archetype</div>
+            <div style="font-family: var(--serif); font-size: clamp(2em, 7vw, 3em); font-style: italic; color: var(--accent); line-height: 1.2; margin-bottom: 16px;">{{ arch.archetype }}</div>
+            <div style="font-size: 0.9em; color: var(--text-secondary); font-weight: 300; max-width: 400px; margin: 0 auto 32px;">{{ arch.body }}</div>
+
+            <!-- Radar chart -->
+            {% if arch.radar %}
+            <svg viewBox="0 0 300 300" width="280" height="280" style="margin: 0 auto; display: block;">
+                <!-- Background rings -->
+                {% for r in [40, 80, 120] %}
+                <circle cx="150" cy="150" r="{{ r }}" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+                {% endfor %}
+
+                <!-- Axis lines and labels -->
+                {% set axes = [
+                    ('nocturnal', 'NOCTURNAL', 150, 30),
+                    ('exploration', 'EXPLORER', 254, 79),
+                    ('nostalgia', 'NOSTALGIA', 278, 195),
+                    ('shadow', 'SHADOW', 212, 280),
+                    ('patience', 'PATIENCE', 88, 280),
+                    ('loyalty', 'LOYALTY', 22, 195),
+                    ('acceleration', 'MOMENTUM', 46, 79),
+                    ('rawness', 'RAWNESS', 150, 30),
+                ] %}
+                {% set radar_keys = ['nocturnal', 'exploration', 'nostalgia', 'shadow', 'patience', 'loyalty', 'acceleration', 'rawness'] %}
+                {% set n = 8 %}
+                {% set pi = 3.14159265 %}
+
+                <!-- Draw axis lines -->
+                {% for i in range(n) %}
+                {% set angle = (2 * pi * i / n) - pi/2 %}
+                {% set ex = 150 + 120 * (angle | cos if angle is defined else 1) %}
+                {% set ey = 150 + 120 * (angle | sin if angle is defined else 0) %}
+                <line x1="150" y1="150" x2="{{ 150 + 120 * [1, 0.707, 0, -0.707, -1, -0.707, 0, 0.707][i] }}" y2="{{ 150 + 120 * [-1, -0.707, 0, 0.707, 1, 0.707, 0, -0.707][i] | default(0) }}" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+                {% endfor %}
+
+                <!-- Radar polygon -->
+                {% set coords = [] %}
+                {% set directions_x = [0, 0.707, 1, 0.707, 0, -0.707, -1, -0.707] %}
+                {% set directions_y = [-1, -0.707, 0, 0.707, 1, 0.707, 0, -0.707] %}
+                <polygon points="{% for key in radar_keys %}{% set val = arch.radar.get(key, 0.3) %}{% set i = loop.index0 %}{{ 150 + (val * 110) * directions_x[i] }},{{ 150 + (val * 110) * directions_y[i] }} {% endfor %}" fill="rgba(232,196,124,0.1)" stroke="rgba(232,196,124,0.6)" stroke-width="1.5"/>
+
+                <!-- Data points -->
+                {% for key in radar_keys %}
+                {% set val = arch.radar.get(key, 0.3) %}
+                {% set i = loop.index0 %}
+                <circle cx="{{ 150 + (val * 110) * directions_x[i] }}" cy="{{ 150 + (val * 110) * directions_y[i] }}" r="3" fill="var(--warm)"/>
+                {% endfor %}
+
+                <!-- Labels -->
+                {% set label_names = ['NIGHT', 'EXPLORE', 'PAST', 'SHADOW', 'PATIENCE', 'LOYAL', 'MOMENTUM', 'RAW'] %}
+                {% for label in label_names %}
+                {% set i = loop.index0 %}
+                <text x="{{ 150 + 140 * directions_x[i] }}" y="{{ 150 + 140 * directions_y[i] }}" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.25)" font-family="'JetBrains Mono', monospace" font-size="7" letter-spacing="1.5">{{ label }}</text>
+                {% endfor %}
+            </svg>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Stats grid -->
+        <div class="stats-grid animate-in">
+            <div class="stat-cell">
+                <div class="number">{{ "{:,}".format(visuals.total) }}</div>
+                <div class="label">tracks</div>
+            </div>
+            <div class="stat-cell">
+                <div class="number">{{ "{:,}".format(visuals.unique_artists) }}</div>
+                <div class="label">artists</div>
+            </div>
+            <div class="stat-cell">
+                <div class="number">{{ visuals.span_years }}</div>
+                <div class="label">years</div>
+            </div>
+            <div class="stat-cell">
+                <div class="number">{{ visuals.collab_pct }}%</div>
+                <div class="label">collabs</div>
+            </div>
+            <div class="stat-cell">
+                <div class="number">{{ visuals.explicit_pct }}%</div>
+                <div class="label">explicit</div>
+            </div>
+            <div class="stat-cell">
+                <div class="number">{{ visuals.unsaved_count }}</div>
+                <div class="label">unsaved plays</div>
             </div>
         </div>
 
-        {% for insight in insights %}
-        <div class="insight">
-            <div class="insight-type">{{ insight.type }}</div>
-            <div class="insight-title">{{ insight.title }}</div>
-            <div class="insight-body">{{ insight.body }}</div>
+        <!-- Decade distribution -->
+        {% if visuals.decades %}
+        <div class="decade-viz animate-in">
+            <div class="title">Decades</div>
+            <div class="decade-bar">
+                {% set colors = ['#2d1b4e', '#1b3a4e', '#1b4e3a', '#3a4e1b', '#4e3a1b', '#4e1b2d', '#e8c47c', '#c47ce8', '#7ce8c4', '#e87c7c'] %}
+                {% for d in visuals.decades %}
+                <div class="decade-segment" style="flex: {{ d.value }}; background: {{ colors[loop.index0 % 10] }};">
+                    <span class="tip">{{ d.label }}: {{ d.value }}%</span>
+                    {% if d.value > 8 %}{{ d.label }}{% endif %}
+                </div>
+                {% endfor %}
+            </div>
         </div>
-        {% endfor %}
+        {% endif %}
 
-        <div class="share-section">
-            <h2>Get a relationship reading</h2>
-            <p>Share this link with a friend. When they sign in, you'll both see a reading of the space between your libraries.</p>
-            <div class="share-url" onclick="copyLink(this)" title="Click to copy">{{ share_url }}</div>
-            <br>
-            <span class="copied" id="copied-msg">Copied!</span>
+        <!-- Save activity sparkline -->
+        {% if visuals.monthly %}
+        <div class="activity-viz animate-in">
+            <div class="title">Saving activity</div>
+            <div class="sparkline-container">
+                {% set max_count = visuals.monthly | map(attribute='count') | max %}
+                {% for m in visuals.monthly %}
+                <div class="spark-bar" style="height: {{ (m.count / max_count * 100) | int }}%;">
+                    <span class="spark-tip">{{ m.month }}: {{ m.count }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Top artists -->
+        {% if visuals.top_artists %}
+        <div class="artist-bars animate-in">
+            <div class="title">Most saved artists</div>
+            {% set max_artist = visuals.top_artists[0].count if visuals.top_artists else 1 %}
+            {% for a in visuals.top_artists %}
+            <div class="artist-row">
+                <div class="artist-name">{{ a.name }}</div>
+                <div class="artist-bar-track">
+                    <div class="artist-bar-fill" style="width: {{ (a.count / max_artist * 100) | int }}%;"></div>
+                </div>
+                <div class="artist-count">{{ a.count }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Insights -->
+        <div class="insights">
+            {% for insight in insights %}
+            {% if insight.type != 'archetype' %}
+            <div class="insight animate-in">
+                <span class="insight-label">{{ insight.type }}</span>
+                <div class="insight-title">{{ insight.title }}</div>
+                <div class="insight-body">{{ insight.body }}</div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+
+        <!-- Share -->
+        <div class="share animate-in">
+            <h2>Read with someone</h2>
+            <p>Share this link with a friend. When they sign in, you'll both get a reading of what lives in the space between your libraries.</p>
+            <div class="share-link-box" onclick="copyLink()">
+                <span class="url" id="share-url">{{ share_url }}</span>
+                <span class="copy-label" id="copy-label">copy</span>
+            </div>
         </div>
 
         {% if pairings %}
-        <div class="pairings">
-            <h2>Your readings</h2>
+        <div class="pairings animate-in">
+            <div class="pairings-title">Your readings</div>
             {% for p in pairings %}
-            <a href="{{ url_for('together', user_a=p.user_a, user_b=p.user_b) }}" style="text-decoration: none;">
-                <div class="pairing-card">
-                    <div class="names">
-                        <span>{{ p.name_a }}</span> & <span>{{ p.name_b }}</span>
-                    </div>
-                    <div class="btn btn-small btn-share">View reading</div>
+            <a href="{{ url_for('together', user_a=p.user_a, user_b=p.user_b) }}" class="pairing-card">
+                <div class="pairing-names">
+                    {{ p.name_a }}<span class="amp">&</span>{{ p.name_b }}
                 </div>
+                <span class="pairing-arrow">&rarr;</span>
             </a>
             {% endfor %}
         </div>
         {% endif %}
     </div>
 
+    <div class="copied-toast" id="toast">Copied to clipboard</div>
+
     <script>
-    function copyLink(el) {
-        navigator.clipboard.writeText(el.textContent.trim());
-        document.getElementById('copied-msg').style.display = 'inline';
+    function copyLink() {
+        const url = document.getElementById('share-url').textContent.trim();
+        navigator.clipboard.writeText(url);
+        const toast = document.getElementById('toast');
+        toast.classList.add('show');
+        document.getElementById('copy-label').textContent = 'copied';
         setTimeout(() => {
-            document.getElementById('copied-msg').style.display = 'none';
+            toast.classList.remove('show');
+            document.getElementById('copy-label').textContent = 'copy';
         }, 2000);
     }
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.animationPlayState = 'running';
+            }
+        });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.animate-in').forEach(el => {
+        el.style.animationPlayState = 'paused';
+        observer.observe(el);
+    });
     </script>
 </body>
 </html>
