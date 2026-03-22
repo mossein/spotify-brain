@@ -581,84 +581,659 @@ class RelationshipAnalysis:
 # ---------------------------------------------------------------------------
 
 class NarrativeEngine:
-    """Turn computed metrics into natural language insights."""
+    """Turn computed metrics into deeply personal, data-driven narratives."""
+
+    # --- Helpers ---
+
+    def _v(self, variants, *seeds):
+        """Deterministically pick a variant based on data seeds."""
+        h = hash(tuple(str(s) for s in seeds))
+        return variants[h % len(variants)]
+
+    def _fmt(self, items, conj="and"):
+        """Format list with Oxford comma: 'a, b, and c'."""
+        if not items:
+            return ""
+        if len(items) == 1:
+            return items[0]
+        if len(items) == 2:
+            return f"{items[0]} {conj} {items[1]}"
+        return ", ".join(items[:-1]) + f", {conj} {items[-1]}"
+
+    def _top(self, p, n=3):
+        """Top n artist names from saved library."""
+        return [a for a, _ in p.artist_counts.most_common(n)]
+
+    # --- Generators ---
 
     def generate_single(self, profile):
         """Generate insights for a single library."""
-        insights = []
-
-        # Archetype (first - the headline)
-        insights.append(self._archetype_insight(profile))
-
-        # Identity
-        insights.append(self._identity_insight(profile))
-
-        # Emotional signature
-        insights.append(self._emotional_insight(profile))
-
-        # Temporal patterns
-        insights.append(self._temporal_insight(profile))
-
-        # Nostalgia
-        insights.append(self._nostalgia_insight(profile))
-
-        # Unsaved obsessions
-        insights.append(self._unsaved_insight(profile))
-
-        # Evolution
-        insights.append(self._evolution_insight(profile))
-
+        insights = [
+            self._archetype_insight(profile),
+            self._identity_insight(profile),
+            self._emotional_insight(profile),
+            self._temporal_insight(profile),
+            self._nostalgia_insight(profile),
+            self._unsaved_insight(profile),
+            self._evolution_insight(profile),
+        ]
         return [i for i in insights if i]
 
     def generate_relationship(self, analysis):
         """Generate insights for a relationship between two libraries."""
-        a = analysis.a
-        b = analysis.b
-        insights = []
-
-        # Archetype pairing (first)
-        insights.append(self._archetype_pairing_insight(analysis))
-
-        # The connection
-        insights.append(self._connection_insight(analysis))
-
-        # The shared ground
-        insights.append(self._shared_ground_insight(analysis))
-
-        # The emotional alignment
-        insights.append(self._emotional_alignment_insight(analysis))
-
-        # The complementary gaps
-        insights.append(self._complementary_insight(analysis))
-
-        # The shadow selves
-        insights.append(self._shadow_comparison_insight(analysis))
-
-        # The dynamic
-        insights.append(self._dynamic_insight(analysis))
-
-        # The trajectory
-        insights.append(self._trajectory_insight(analysis))
-
+        insights = [
+            self._archetype_pairing_insight(analysis),
+            self._connection_insight(analysis),
+            self._shared_ground_insight(analysis),
+            self._emotional_alignment_insight(analysis),
+            self._complementary_insight(analysis),
+            self._shadow_comparison_insight(analysis),
+            self._dynamic_insight(analysis),
+            self._trajectory_insight(analysis),
+        ]
         return [i for i in insights if i]
 
     # --- Single library narrative blocks ---
 
     def _archetype_insight(self, p):
+        top3 = self._top(p, 3)
+        top_str = self._fmt(top3)
+        kept = p.unique_artists - p.one_track_artists
+
+        # Build specific archetype detail based on what's most distinctive
+        details = []
+
+        if p.late_night_pct > 30:
+            details.append(self._v([
+                f"{p.late_night_pct:.0f}% of listening happens between midnight and dawn",
+                f"nearly a third of all plays land after midnight",
+                f"the hours after midnight account for {p.late_night_pct:.0f}% of all listening",
+            ], p.user, "time"))
+        elif p.late_night_pct > 20:
+            details.append(f"{p.late_night_pct:.0f}% of plays fall in the small hours")
+
+        if p.one_track_pct > 80:
+            details.append(self._v([
+                f"only {kept} out of {p.unique_artists:,} artists earned more than a single save",
+                f"{p.one_track_pct:.0f}% of artists got exactly one track before {p.user} moved on",
+            ], p.user, "depth"))
+        elif p.top10_loyalty > 35:
+            details.append(
+                f"{p.top10_loyalty:.0f}% of the library belongs to just 10 artists, led by {top3[0] if top3 else 'a few favorites'}"
+            )
+
+        if p.unsaved_pct > 20:
+            details.append(f"{p.unsaved_pct:.0f}% of top-played tracks were never saved")
+
+        body = (
+            f"{p.user} is a {p.archetype}. "
+            f"{p.archetype_desc_primary.capitalize()} and {p.archetype_desc_secondary}."
+        )
+        if details:
+            body += " " + ". ".join(details) + "."
+        body += (
+            f" Full signature: "
+            f"{p.time_axis} / {p.depth_axis} / {p.direction_axis} / "
+            f"{p.curation_axis} / {p.emotion_axis}."
+        )
+
         return {
             "type": "archetype",
             "title": p.archetype,
-            "body": (
-                f"{p.user} is a {p.archetype}. "
-                f"{p.archetype_desc_primary.capitalize()} and {p.archetype_desc_secondary}. "
-                f"Full signature: "
-                f"{p.time_axis} / {p.depth_axis} / {p.direction_axis} / "
-                f"{p.curation_axis} / {p.emotion_axis}."
-            ),
+            "body": body,
             "archetype": p.archetype,
             "axes": p.archetype_axes,
             "radar": p.radar,
         }
+
+    def _identity_insight(self, p):
+        top5 = self._top(p, 5)
+        top3 = top5[:3]
+        top_str = self._fmt(top3)
+        kept = p.unique_artists - p.one_track_artists
+        tracks_per = p.total / max(p.unique_artists, 1)
+
+        # Top artist track counts for specificity
+        top1_count = p.artist_counts[top5[0]] if top5 else 0
+        top3_total = sum(p.artist_counts[a] for a in top3) if top3 else 0
+
+        if p.one_track_pct > 85:
+            # Extreme sampler — barely anyone gets a second chance
+            title = f"{p.user} never looks back"
+            body = self._v([
+                (f"{p.unique_artists:,} artists, and {p.one_track_pct:.0f}% of them "
+                 f"appear exactly once. {p.user} moves through music the way some people "
+                 f"move through cities — always passing through, rarely unpacking. "
+                 f"Only {kept} artists earned more than one track. "
+                 f"The ones who stuck: {top_str}."),
+                (f"Out of {p.unique_artists:,} artists in this library, only {kept} "
+                 f"got a second save. That's a {p.one_track_pct:.0f}% single-visit rate. "
+                 f"{p.user} listens like someone channel-surfing at 3am — "
+                 f"everything gets a moment, almost nothing gets two. "
+                 f"The rare repeats: {top_str} with {top3_total} tracks between them."),
+                (f"A {p.total:,}-track library across {p.unique_artists:,} artists, "
+                 f"and {p.one_track_pct:.0f}% of those artists appear once and vanish. "
+                 f"{p.user} doesn't collect artists — {p.user} passes through them. "
+                 f"{top_str} are the {kept} exceptions who got a return visit."),
+            ], p.user, p.total)
+
+        elif p.one_track_pct > 75:
+            # Wide explorer — samples broadly
+            title = f"{p.user} is a wide explorer"
+            body = self._v([
+                (f"{p.user}'s library spans {p.unique_artists:,} artists, "
+                 f"and {p.one_track_pct:.0f}% of them appear only once. "
+                 f"{top_str} are the pillars — {top3_total} tracks between them — "
+                 f"but the rest is a trail of everywhere {p.user} has been."),
+                (f"{p.unique_artists:,} artists. {p.one_track_pct:.0f}% show up once "
+                 f"and vanish. This isn't a collection of favorites — it's a travel log. "
+                 f"{top_str} are the home bases {p.user} returns to between expeditions, "
+                 f"with {top1_count} tracks for {top5[0] if top5 else 'the top artist'} alone."),
+                (f"A library of {p.total:,} tracks across {p.unique_artists:,} artists. "
+                 f"Most of those artists are one-save encounters — {p.user} keeps moving. "
+                 f"Only {kept} artists earned a return trip. "
+                 f"The inner circle: {self._fmt(top5)} — but even they share the space "
+                 f"with {p.one_track_artists:,} artists who got a single track."),
+            ], p.user, p.total)
+
+        elif p.one_track_pct > 60:
+            # Moderate explorer — curious but gives artists a fair shot
+            title = f"{p.user} explores with intention"
+            body = self._v([
+                (f"{p.unique_artists:,} artists, {p.one_track_pct:.0f}% appearing once. "
+                 f"That's exploratory but not restless — {p.user} gives artists a real chance "
+                 f"before moving on. When they return, they return properly: "
+                 f"{top_str} have {top3_total} tracks between them."),
+                (f"{p.total:,} tracks spread across {p.unique_artists:,} artists. "
+                 f"About {p.one_track_pct:.0f}% are single-save encounters, "
+                 f"but that leaves {kept} artists who made a lasting impression. "
+                 f"{top5[0] if top5 else 'The top artist'} leads with {top1_count} tracks — "
+                 f"the clearest signal of what {p.user} actually gravitates toward."),
+            ], p.user, p.total)
+
+        elif p.top10_loyalty > 40:
+            # Extreme devotee — library is dominated by a handful of artists
+            title = f"{p.user} goes all in"
+            body = self._v([
+                (f"{p.top10_loyalty:.0f}% of the library comes from just 10 artists. "
+                 f"{top5[0] if top5 else 'The top artist'} alone accounts for {top1_count} tracks. "
+                 f"When {p.user} finds something, they don't sample — they move in. "
+                 f"The core rotation: {self._fmt(top5)}."),
+                (f"{p.user} doesn't browse. {p.top10_loyalty:.0f}% of all {p.total:,} "
+                 f"tracks belong to 10 artists. "
+                 f"{top5[0] if top5 else 'The top artist'} leads with {top1_count} tracks — "
+                 f"that's not casual listening, that's a relationship. "
+                 f"The inner circle: {self._fmt(top5)}."),
+                (f"This is a library built on loyalty. {p.top10_loyalty:.0f}% of everything "
+                 f"belongs to just 10 artists: {self._fmt(top5[:4])} and a few others. "
+                 f"{top1_count} tracks for {top5[0] if top5 else 'the favorite'} alone. "
+                 f"{p.user} finds what works and stays there."),
+            ], p.user, p.total)
+
+        elif p.top10_loyalty > 30:
+            # Deep diver — clear favorites but still explores
+            title = f"{p.user} is a deep diver"
+            body = self._v([
+                (f"{p.top10_loyalty:.0f}% of the library comes from 10 artists — "
+                 f"{top_str} leading the count. "
+                 f"{top5[0] if top5 else 'The top artist'} has {top1_count} tracks. "
+                 f"When {p.user} connects with an artist, they stay."),
+                (f"{p.user} goes deep. {p.top10_loyalty:.0f}% of {p.total:,} tracks "
+                 f"come from a core 10. {top_str} form the backbone — "
+                 f"the rest of the {p.unique_artists:,} artists fill in the margins."),
+            ], p.user, p.total)
+
+        else:
+            # Balanced — neither extreme
+            title = f"{p.user} balances depth and range"
+            body = self._v([
+                (f"{p.unique_artists:,} artists across {p.total:,} tracks — "
+                 f"an average of {tracks_per:.1f} tracks per artist. "
+                 f"Enough depth to know what they love ({top_str} are the anchors), "
+                 f"enough range to keep discovering. "
+                 f"Neither obsessive nor restless — just someone who listens with intent."),
+                (f"Not a drifter, not a devotee. {p.user} runs {p.total:,} tracks "
+                 f"across {p.unique_artists:,} artists — a {tracks_per:.1f}-track average "
+                 f"per artist. {top_str} get the most plays, "
+                 f"but no single artist dominates. A library that's both wide and lived-in."),
+            ], p.user, p.total)
+
+        return {"type": "identity", "title": title, "body": body}
+
+    def _emotional_insight(self, p):
+        parts = []
+        top3 = self._top(p, 3)
+
+        # Anger / softness
+        if p.anger_index < 0.5:
+            parts.append(self._v([
+                (f"{p.total:,} tracks and almost zero aggression. No rage, no confrontation. "
+                 f"When {p.user} hurts, the music doesn't fight — it holds. "
+                 f"A library built for processing, not punching."),
+                (f"Scan {p.total:,} tracks and you'll barely find an edge. "
+                 f"{p.user}'s library is a shelter, not a weapon — "
+                 f"whatever they're going through, the music absorbs it."),
+                (f"One of the gentlest libraries you'll see. {p.total:,} tracks, "
+                 f"barely a trace of anger anywhere. {p.user} processes through "
+                 f"beauty and warmth, never through force."),
+            ], p.user, "emo"))
+        elif p.anger_index < 1.5:
+            parts.append(self._v([
+                (f"Almost no anger in {p.total:,} tracks. When {p.user} is in pain, "
+                 f"the music doesn't scream — it glows. That's not avoidance. "
+                 f"That's a whole philosophy of feeling."),
+                (f"Very little rage anywhere in this library. {p.user} doesn't use "
+                 f"music as a weapon — it's more like weather. "
+                 f"Something to be inside of, not something to wield."),
+                (f"{p.total:,} tracks and barely any confrontation. "
+                 f"{p.user} gravitates toward light, not heat. "
+                 f"The emotional range is wide — it just doesn't include war."),
+            ], p.user, "emo"))
+        elif p.anger_index > 5:
+            parts.append(self._v([
+                (f"{p.anger_index:.1f}% of tracks carry aggression in the title. "
+                 f"{p.user} doesn't flinch from the heavy stuff — this library has teeth."),
+                (f"This library bites. {p.anger_index:.1f}% of track names carry anger words. "
+                 f"{p.user} uses music the way some people use a punching bag."),
+            ], p.user, "emo"))
+        elif p.anger_index > 3:
+            parts.append(
+                f"A noticeable edge runs through this library — "
+                f"{p.anger_index:.1f}% of tracks carry confrontation in their titles. "
+                f"{p.user} isn't afraid of music that pushes back."
+            )
+
+        # Explicit content
+        if p.explicit_pct < 8:
+            parts.append(self._v([
+                f"Only {p.explicit_pct:.0f}% explicit. One of the cleanest libraries around.",
+                f"{p.explicit_pct:.0f}% explicit content — remarkably clean. "
+                f"The music speaks without swearing.",
+            ], p.user, "exp"))
+        elif p.explicit_pct < 15:
+            pass  # unremarkable, skip
+        elif p.explicit_pct > 35:
+            parts.append(self._v([
+                (f"{p.explicit_pct:.0f}% explicit. {p.user} doesn't filter anything — "
+                 f"if the music hits, the language is irrelevant."),
+                (f"{p.explicit_pct:.0f}% explicit content. Unfiltered, uncensored — "
+                 f"{p.user} takes music as it comes, clean version be damned."),
+            ], p.user, "exp"))
+        elif p.explicit_pct > 25:
+            parts.append(
+                f"{p.explicit_pct:.0f}% explicit. {p.user} leans raw — "
+                f"the library doesn't shy from unfiltered expression."
+            )
+        elif p.explicit_pct > 20:
+            parts.append(f"{p.explicit_pct:.0f}% explicit — a touch more edge than average.")
+
+        # Collaborations
+        if p.collab_pct > 45:
+            parts.append(self._v([
+                (f"{p.collab_pct:.0f}% collaborations — nearly half the library. "
+                 f"{p.user} is drawn to what happens when worlds collide."),
+                (f"Almost half the library ({p.collab_pct:.0f}%) features multiple artists. "
+                 f"{p.user} doesn't just like artists — {p.user} likes what happens when they meet."),
+            ], p.user, "coll"))
+        elif p.collab_pct > 35:
+            parts.append(
+                f"{p.collab_pct:.0f}% of tracks feature multiple artists. "
+                f"{p.user} gravitates toward collision — different voices in the same room."
+            )
+        elif p.collab_pct < 15:
+            parts.append(
+                f"Only {p.collab_pct:.0f}% collaborations. {p.user} prefers "
+                f"artists in their own lane — solo visions, not committee work."
+            )
+
+        # Long tracks / patience
+        if p.long_track_pct > 15:
+            parts.append(self._v([
+                (f"{p.long_track_pct:.0f}% of tracks run past 6 minutes. "
+                 f"{p.user} has patience most don't — "
+                 f"the kind that lets a song take 4 minutes just to arrive."),
+                (f"{p.long_track_pct:.0f}% of the library is over 6 minutes. "
+                 f"These aren't background tracks — they're commitments. "
+                 f"{p.user} doesn't need the payoff in the first 30 seconds."),
+            ], p.user, "long"))
+        elif p.long_track_pct > 10:
+            parts.append(
+                f"{p.long_track_pct:.0f}% of tracks break 6 minutes. "
+                f"{p.user} has room for the slow burn."
+            )
+
+        if not parts:
+            return None
+
+        return {"type": "emotional", "title": "Emotional signature", "body": " ".join(parts)}
+
+    def _temporal_insight(self, p):
+        parts = []
+
+        if p.library_span_days > 0:
+            years = p.library_span_days / 365
+            rate = p.total / max(years, 0.1)
+
+            if rate > 200:
+                pace_desc = "a voracious pace"
+            elif rate > 100:
+                pace_desc = "a steady stream"
+            elif rate > 50:
+                pace_desc = "a measured drip"
+            else:
+                pace_desc = "a slow, deliberate accumulation"
+
+            parts.append(self._v([
+                (f"{p.total:,} tracks saved over {years:.1f} years "
+                 f"(since {p.first_save.strftime('%B %Y')}). "
+                 f"That's roughly {rate:.0f} tracks per year — {pace_desc}."),
+                (f"The first save was {p.first_save.strftime('%B %Y')}. "
+                 f"{years:.1f} years and {p.total:,} tracks later, still going. "
+                 f"Average pace: {rate:.0f} tracks a year."),
+                (f"Started saving in {p.first_save.strftime('%B %Y')}. "
+                 f"{p.total:,} tracks across {years:.1f} years — "
+                 f"about {rate:.0f} a year, {rate / 12:.0f} a month."),
+            ], p.user, "temp"))
+
+        # Gaps
+        if p.longest_gap > 365:
+            gap = p.gaps[0]
+            years_gap = gap['days'] / 365
+            parts.append(self._v([
+                (f"Then there's the silence: {gap['days']:,} days — "
+                 f"nearly {years_gap:.1f} years — between {gap['start']} and {gap['end']}. "
+                 f"Not a hiatus. A disappearance. When the music came back, "
+                 f"it came back different."),
+                (f"The gap between {gap['start']} and {gap['end']}: "
+                 f"{gap['days']:,} days of nothing. {years_gap:.1f} years "
+                 f"without a single save. Whatever happened in that window, "
+                 f"Spotify wasn't part of it."),
+                (f"{gap['days']:,} days of silence. From {gap['start']} to {gap['end']}, "
+                 f"the library flatlined. {years_gap:.1f} years. "
+                 f"Something closed. And when it reopened, a new era started."),
+            ], p.user, gap['days']))
+        elif p.longest_gap > 120:
+            gap = p.gaps[0]
+            months = gap['days'] / 30
+            parts.append(self._v([
+                (f"The longest silence: {gap['days']} days between "
+                 f"{gap['start']} and {gap['end']}. "
+                 f"Nearly {months:.0f} months without saving. "
+                 f"When {p.user} came back, the library entered a new chapter."),
+                (f"A {gap['days']}-day gap between {gap['start']} and {gap['end']}. "
+                 f"{months:.0f} months of radio silence. "
+                 f"Something shifted during that window."),
+            ], p.user, gap['days']))
+        elif p.longest_gap > 60:
+            gap = p.gaps[0]
+            parts.append(
+                f"The longest break: {gap['days']} days between "
+                f"{gap['start']} and {gap['end']}. A pause, not a stop."
+            )
+
+        # Quiet vs busy years
+        if hasattr(p, 'quietest_year') and hasattr(p, 'busiest_year'):
+            ratio = p.quietest_year[1] / max(p.busiest_year[1], 1)
+            if ratio < 0.1:
+                parts.append(self._v([
+                    (f"In {p.quietest_year[0]}: {p.quietest_year[1]} tracks. "
+                     f"In {p.busiest_year[0]}: {p.busiest_year[1]}. "
+                     f"That's not a difference in habit — it's a different person."),
+                    (f"{p.quietest_year[0]} had just {p.quietest_year[1]} saves. "
+                     f"{p.busiest_year[0]} had {p.busiest_year[1]}. "
+                     f"A {p.busiest_year[1] // max(p.quietest_year[1], 1)}x difference "
+                     f"that marks a complete transformation."),
+                ], p.user, "quiet"))
+            elif ratio < 0.25:
+                parts.append(self._v([
+                    (f"Quietest year: {p.quietest_year[0]} with {p.quietest_year[1]} tracks. "
+                     f"Busiest: {p.busiest_year[0]} with {p.busiest_year[1]}. "
+                     f"That gap is a chapter boundary."),
+                    (f"{p.quietest_year[0]}: {p.quietest_year[1]} tracks. "
+                     f"{p.busiest_year[0]}: {p.busiest_year[1]}. "
+                     f"The library has seasons — and {p.busiest_year[0]} was summer."),
+                ], p.user, "quiet"))
+
+        # Binges
+        if p.biggest_binge > 20:
+            day, count = p.binge_days[0]
+            parts.append(self._v([
+                (f"Biggest binge: {count} tracks on {day}. "
+                 f"That's not browsing — that's a fever. "
+                 f"Something was being chased."),
+                (f"{count} tracks saved in a single day ({day}). "
+                 f"Whatever happened that day, the music was the only way to process it."),
+            ], p.user, count))
+        elif p.biggest_binge > 12:
+            day, count = p.binge_days[0]
+            parts.append(self._v([
+                (f"Biggest single-day save: {count} tracks on {day}. "
+                 f"A rabbit hole that went deep."),
+                (f"{count} tracks on {day}. That's a late-night discovery session "
+                 f"that refused to end."),
+            ], p.user, count))
+        elif p.biggest_binge > 8:
+            day, count = p.binge_days[0]
+            parts.append(
+                f"Peak saving day: {count} tracks on {day}."
+            )
+
+        if not parts:
+            return None
+
+        return {"type": "temporal", "title": "The timeline", "body": " ".join(parts)}
+
+    def _nostalgia_insight(self, p):
+        # Build decade breakdown for specificity
+        significant_decades = sorted(
+            [(d, pct) for d, pct in p.decade_pct.items() if pct > 5],
+            key=lambda x: -x[1]
+        )
+        decade_str = ", ".join(f"{d} ({pct:.0f}%)" for d, pct in significant_decades[:4])
+        num_decades = len([d for d, pct in p.decade_pct.items() if pct > 3])
+
+        if p.nostalgia_trend > 8:
+            # Extreme excavation
+            return {
+                "type": "nostalgia",
+                "title": "The backward reach",
+                "body": self._v([
+                    (f"{p.user} is on a one-way trip into the past. "
+                     f"Currently averaging {p.current_nostalgia:.0f} years of lookback, "
+                     f"and the number keeps climbing. Early saves were mostly current — "
+                     f"now the library pulls from wells decades deep. "
+                     f"The spread: {decade_str}. "
+                     f"Someone tracing every sound back to its origin."),
+                    (f"The nostalgia trajectory is steep and accelerating. "
+                     f"{p.user} started by saving what was new, "
+                     f"now averages {p.current_nostalgia:.0f} years behind the present. "
+                     f"Home decade: {p.home_decade}, but the reach extends across "
+                     f"{num_decades} decades: {decade_str}. "
+                     f"This isn't regression. It's archaeology."),
+                ], p.user, "nost"),
+            }
+
+        elif p.nostalgia_trend > 5:
+            return {
+                "type": "nostalgia",
+                "title": "The backward reach",
+                "body": self._v([
+                    (f"{p.user} reaches further into the past every year. "
+                     f"Currently averaging {p.current_nostalgia:.0f} years of lookback. "
+                     f"The spread: {decade_str}. "
+                     f"This isn't nostalgia — it's excavation. "
+                     f"Tracing every thread back to its source."),
+                    (f"Each year, {p.user}'s saves reach a little further back. "
+                     f"Average lookback: {p.current_nostalgia:.0f} years. "
+                     f"The library has been migrating from {p.home_decade} outward, "
+                     f"now spanning {decade_str}."),
+                ], p.user, "nost"),
+            }
+
+        elif p.current_nostalgia > 12:
+            return {
+                "type": "nostalgia",
+                "title": "The archivist",
+                "body": self._v([
+                    (f"{p.user} listens {p.current_nostalgia:.0f} years behind the present "
+                     f"on average. Home decade: {p.home_decade}. "
+                     f"Distribution: {decade_str}. "
+                     f"A curator, not just a consumer — someone who believes "
+                     f"the canon wasn't built yesterday."),
+                    (f"An average lookback of {p.current_nostalgia:.0f} years. "
+                     f"The library lives in the {p.home_decade} but branches into {decade_str}. "
+                     f"{p.user} treats music history as a living thing, not a museum."),
+                ], p.user, "nost"),
+            }
+
+        elif p.current_nostalgia > 8:
+            return {
+                "type": "nostalgia",
+                "title": "The archivist",
+                "body": self._v([
+                    (f"{p.user} listens {p.current_nostalgia:.0f} years behind the present "
+                     f"on average. Home decade: {p.home_decade}. "
+                     f"Someone who trusts that the best stuff has already been made "
+                     f"and the job is to find it."),
+                    (f"Average lookback: {p.current_nostalgia:.0f} years. "
+                     f"Rooted in the {p.home_decade} with a spread across {decade_str}. "
+                     f"{p.user} keeps one ear in the past and one in the present."),
+                ], p.user, "nost"),
+            }
+
+        elif p.current_nostalgia < 3 and p.total > 100:
+            return {
+                "type": "nostalgia",
+                "title": "Living in the present",
+                "body": (
+                    f"{p.user} listens almost exclusively to what's current — "
+                    f"only {p.current_nostalgia:.1f} years of lookback on average. "
+                    f"The library is a snapshot of right now, not a dig through history. "
+                    f"{p.home_decade} dominates everything."
+                ),
+            }
+
+        return None
+
+    def _unsaved_insight(self, p):
+        if not p.unsaved_long:
+            return None
+
+        unsaved_names = [f"{t['artists']} - {t['name']}" for t in p.unsaved_long[:7]]
+        count = len(p.unsaved_long)
+
+        # Look for repeat artists in unsaved
+        unsaved_artists = [t['artists'] for t in p.unsaved_long]
+        repeat_artists = [a for a in set(unsaved_artists) if unsaved_artists.count(a) > 1]
+
+        body_parts = []
+
+        if count > 10:
+            body_parts.append(self._v([
+                (f"{count} songs in the all-time most played that {p.user} has never saved. "
+                 f"That's a significant shadow library — "
+                 f"music the body wants but the identity won't claim."),
+                (f"{p.user} has {count} top-played tracks that never got saved. "
+                 f"These aren't accidents. These are songs on repeat "
+                 f"that never made it to the permanent collection."),
+                (f"A shadow library of {count} tracks. Played enough to rank in the all-time top, "
+                 f"but never saved. {p.user} keeps these at arm's length."),
+            ], p.user, "unsaved"))
+        elif count > 5:
+            body_parts.append(self._v([
+                (f"{count} songs in {p.user}'s most-played that were never saved. "
+                 f"Played on repeat but kept at arm's length."),
+                (f"{p.user} has {count} top-played tracks they never hit save on. "
+                 f"The music gets played — it just doesn't get claimed."),
+            ], p.user, "unsaved"))
+        else:
+            body_parts.append(
+                f"{p.user} has {count} songs in their all-time most played "
+                f"that they've never saved."
+            )
+
+        body_parts.append(
+            f"The unnamed obsessions: {', '.join(unsaved_names)}."
+        )
+
+        if repeat_artists:
+            body_parts.append(
+                f"{self._fmt(repeat_artists)} shows up multiple times in the unsaved — "
+                f"an artist {p.user} keeps circling without committing to."
+            )
+
+        body_parts.append(self._v([
+            "The saved library is a self-portrait. "
+            "The unsaved plays are the parts that got painted over.",
+            "What you save is who you say you are. "
+            "What you play without saving is who you are when nobody's looking.",
+            "The gap between saved and played is the gap between identity and instinct.",
+            "Saving is a declaration. Playing without saving is a confession.",
+        ], p.user, count))
+
+        return {
+            "type": "unsaved",
+            "title": "The unsaved obsessions",
+            "body": " ".join(body_parts),
+        }
+
+    def _evolution_insight(self, p):
+        parts = []
+
+        if p.rising_artists:
+            rising = self._fmt(p.rising_artists[:5])
+            parts.append(self._v([
+                f"Currently rising: {rising}.",
+                f"What's new in the rotation: {rising}.",
+                f"The current obsessions: {rising}.",
+                f"Lately it's been: {rising}.",
+            ], p.user, "rise"))
+
+        if p.falling_artists:
+            falling = self._fmt(p.falling_artists[:5])
+            parts.append(self._v([
+                f"Cooling off: {falling}.",
+                f"Fading from rotation: {falling}.",
+                f"Stepping back from: {falling}.",
+            ], p.user, "fall"))
+
+        if p.alltime_recency > 75:
+            parts.append(self._v([
+                (f"{p.alltime_recency:.0f}% of {p.user}'s all-time most played "
+                 f"were saved in the last year. The entire musical identity "
+                 f"is being rewritten in real time."),
+                (f"{p.alltime_recency:.0f}% of the all-time heavy rotation is from the past year. "
+                 f"{p.user}'s music is more alive right now than it has ever been — "
+                 f"the old favorites are being replaced wholesale."),
+                (f"This is a library in transformation. {p.alltime_recency:.0f}% of the all-time "
+                 f"most played were saved recently. {p.user} isn't settling — "
+                 f"{p.user} is accelerating."),
+            ], p.user, "rec"))
+        elif p.alltime_recency > 60:
+            parts.append(self._v([
+                (f"{p.alltime_recency:.0f}% of {p.user}'s all-time most played were saved "
+                 f"in the last year. The music is more alive right now than ever. "
+                 f"This isn't someone coasting on nostalgia."),
+                (f"{p.alltime_recency:.0f}% of the all-time top tracks are recent saves. "
+                 f"{p.user} isn't living off old favorites — "
+                 f"the current era is the most active one yet."),
+            ], p.user, "rec"))
+        elif p.alltime_recency < 20 and p.total > 200:
+            parts.append(self._v([
+                (f"Only {p.alltime_recency:.0f}% of {p.user}'s all-time favorites "
+                 f"are from the last year. The classics are locked in — "
+                 f"new discoveries have to compete with years of history."),
+                (f"{p.alltime_recency:.0f}% all-time recency. {p.user}'s musical identity "
+                 f"was shaped years ago — recent saves orbit the existing core, "
+                 f"they don't replace it."),
+            ], p.user, "rec"))
+
+        if not parts:
+            return None
+
+        return {"type": "evolution", "title": "Where it's heading", "body": " ".join(parts)}
+
+    # --- Relationship narrative blocks ---
 
     def _archetype_pairing_insight(self, r):
         a = r.a
@@ -675,31 +1250,65 @@ class NarrativeEngine:
             else:
                 different_axes.append((axis, a_val, b_val))
 
-        parts = [
-            f"A {a.archetype} and a {b.archetype}."
-        ]
+        parts = [f"A {a.archetype} and a {b.archetype}."]
 
-        if shared_axes:
+        if len(shared_axes) >= 4:
             parts.append(
-                f"They share: {', '.join(shared_axes).lower()}. "
-                f"These are the frequencies where they naturally sync."
+                f"Nearly identical profiles. They share: {', '.join(shared_axes).lower()}. "
+                f"These two process music the same way — "
+                f"the differences are in the details, not the structure."
+            )
+        elif len(shared_axes) >= 2:
+            parts.append(self._v([
+                (f"They share: {', '.join(shared_axes).lower()}. "
+                 f"These are the frequencies where they naturally sync."),
+                (f"Common wiring: both are {', '.join(shared_axes).lower()}. "
+                 f"This is where the connection has its foundation."),
+                (f"Shared axes: {', '.join(shared_axes).lower()}. "
+                 f"These traits mean they process music through some of the same filters."),
+            ], a.user, b.user))
+        elif shared_axes:
+            parts.append(
+                f"They share one axis: {shared_axes[0].lower()}. "
+                f"A single thread connecting otherwise different musical wiring."
             )
 
         if different_axes:
             tensions = []
             for axis, a_val, b_val in different_axes:
                 tensions.append(f"{a.user} is a {a_val}, {b.user} is a {b_val}")
-            parts.append(
-                f"Where they diverge: {'. '.join(tensions)}. "
-                f"The tension between these positions is where the relationship lives."
-            )
 
-        # Specific pairings that are interesting
+            if len(different_axes) >= 4:
+                parts.append(self._v([
+                    (f"Almost everything else diverges. "
+                     f"{'. '.join(tensions)}. "
+                     f"These aren't just different tastes — they're different "
+                     f"relationships with music entirely."),
+                    (f"Where it splits: {'. '.join(tensions)}. "
+                     f"More contrast than overlap — which means more to discover "
+                     f"in each other's libraries."),
+                ], a.user, b.user))
+            else:
+                parts.append(self._v([
+                    (f"Where they diverge: {'. '.join(tensions)}. "
+                     f"The tension between these positions is where the relationship lives."),
+                    (f"The splits: {'. '.join(tensions)}. "
+                     f"This is where they challenge each other — "
+                     f"the gaps where one can show the other something new."),
+                    (f"Different on: {'. '.join(tensions)}. "
+                     f"These divergences aren't friction — they're the interesting part."),
+                ], a.user, b.user))
+
+        # Specific interesting pairings
         if a.archetype_primary == b.archetype_primary:
-            parts.append(
-                f"Same primary type. They recognize each other immediately - "
-                f"for better and worse. Mirror energy."
-            )
+            parts.append(self._v([
+                (f"Same primary archetype ({a.archetype_primary}). "
+                 f"They recognize each other immediately — mirror energy, "
+                 f"for better and worse."),
+                (f"Both lead with {a.archetype_primary}. "
+                 f"Instant recognition — they'll understand each other's instincts "
+                 f"without explanation."),
+            ], a.user, "pair"))
         elif (a.archetype_primary in ("Excavator", "Archivist") and
               b.archetype_primary in ("Accelerator", "Navigator")) or \
              (b.archetype_primary in ("Excavator", "Archivist") and
@@ -708,9 +1317,7 @@ class NarrativeEngine:
             now_person = b.user if past_person == a.user else a.user
             parts.append(
                 f"{past_person} pulls from the past, {now_person} lives in the now. "
-                f"Together they cover the full timeline. "
-                f"{past_person} shows {now_person} where it all came from. "
-                f"{now_person} shows {past_person} where it's going."
+                f"Together they cover the full timeline."
             )
 
         return {
@@ -719,189 +1326,65 @@ class NarrativeEngine:
             "body": " ".join(parts),
         }
 
-    def _identity_insight(self, p):
-        if p.one_track_pct > 75:
-            style = "a wide explorer"
-            desc = (f"{p.user}'s library spans {p.unique_artists:,} artists, "
-                    f"and {p.one_track_pct:.0f}% of them appear only once. "
-                    f"This is someone who samples broadly, always moving, rarely going back. "
-                    f"The library isn't a collection of favorites - it's a trail of everywhere they've been.")
-        elif p.top10_loyalty > 35:
-            style = "a deep diver"
-            desc = (f"{p.user} goes all in. {p.top10_loyalty:.0f}% of the entire library comes from just 10 artists. "
-                    f"When {p.user} finds something, they don't sample - they excavate.")
-        else:
-            style = "a balanced explorer"
-            desc = (f"{p.user} balances loyalty and curiosity. "
-                    f"{p.unique_artists:,} artists across {p.total:,} tracks, "
-                    f"deep on favorites but always discovering.")
-
-        return {"type": "identity", "title": f"{p.user} is {style}", "body": desc}
-
-    def _emotional_insight(self, p):
-        parts = []
-
-        if p.anger_index < 1.5:
-            parts.append(
-                f"This library has almost no anger in it. "
-                f"{p.total:,} tracks and barely any rage. When {p.user} is in pain, "
-                f"they don't reach for something that screams - they reach for something that glows. "
-                f"That's not a preference. That's a worldview."
-            )
-
-        if p.explicit_pct < 12:
-            parts.append(f"Only {p.explicit_pct:.0f}% explicit content - a relatively clean library.")
-        elif p.explicit_pct > 25:
-            parts.append(f"{p.explicit_pct:.0f}% explicit - {p.user} doesn't sanitize their listening.")
-
-        if p.collab_pct > 35:
-            parts.append(
-                f"{p.collab_pct:.0f}% of the library features multiple artists. "
-                f"{p.user} is drawn to collision - what happens when different voices meet."
-            )
-
-        if p.long_track_pct > 10:
-            parts.append(
-                f"{p.long_track_pct:.0f}% of tracks run over 6 minutes. "
-                f"{p.user} has patience for the slow burn - music that takes its time arriving."
-            )
-
-        if not parts:
-            return None
-
-        return {"type": "emotional", "title": "Emotional signature", "body": " ".join(parts)}
-
-    def _temporal_insight(self, p):
-        parts = []
-
-        if p.library_span_days > 0:
-            years = p.library_span_days / 365
-            parts.append(
-                f"{p.total:,} tracks saved over {years:.1f} years "
-                f"(since {p.first_save.strftime('%B %Y')})."
-            )
-
-        if p.longest_gap > 60:
-            gap = p.gaps[0]
-            parts.append(
-                f"The longest silence: {gap['days']} days between "
-                f"{gap['start']} and {gap['end']}. "
-                f"Something happened. The music stopped, then it came back."
-            )
-
-        if hasattr(p, 'quietest_year') and hasattr(p, 'busiest_year'):
-            if p.quietest_year[1] < p.busiest_year[1] * 0.25:
-                parts.append(
-                    f"The quietest year was {p.quietest_year[0]} with only {p.quietest_year[1]} tracks. "
-                    f"Compare that to {p.busiest_year[0]} with {p.busiest_year[1]}. "
-                    f"That gap isn't just less listening - it's a chapter boundary."
-                )
-
-        if p.biggest_binge > 10:
-            day, count = p.binge_days[0]
-            parts.append(
-                f"Biggest single-day binge: {count} tracks on {day}. "
-                f"That's not casual browsing - that's a 3am rabbit hole."
-            )
-
-        if not parts:
-            return None
-
-        return {"type": "temporal", "title": "The timeline", "body": " ".join(parts)}
-
-    def _nostalgia_insight(self, p):
-        if p.nostalgia_trend > 5:
-            return {
-                "type": "nostalgia",
-                "title": "The backward reach",
-                "body": (
-                    f"{p.user} reaches further into the past every year. "
-                    f"Currently averaging {p.current_nostalgia:.0f} years of lookback per track. "
-                    f"The nostalgia trajectory has been climbing steadily - "
-                    f"early saves were mostly current music, now the library is pulling from deeper wells. "
-                    f"This isn't regression. It's excavation. "
-                    f"{p.user} is tracing every thread back to its source."
-                ),
-            }
-        elif p.current_nostalgia > 10:
-            return {
-                "type": "nostalgia",
-                "title": "The archivist",
-                "body": (
-                    f"{p.user} listens {p.current_nostalgia:.0f} years behind the present on average. "
-                    f"Home decade: {p.home_decade}. "
-                    f"This is someone who trusts that the good stuff has already been made "
-                    f"and the job is to find it."
-                ),
-            }
-        return None
-
-    def _unsaved_insight(self, p):
-        if not p.unsaved_long:
-            return None
-
-        unsaved_names = [f"{t['artists']} - {t['name']}" for t in p.unsaved_long[:7]]
-
-        return {
-            "type": "unsaved",
-            "title": "The unsaved obsessions",
-            "body": (
-                f"{p.user} has {len(p.unsaved_long)} songs in their all-time most played "
-                f"that they've never saved. "
-                f"These are the songs the body reaches for but the mind won't claim: "
-                f"{', '.join(unsaved_names)}. "
-                f"The saved library is a statement: this is who I am. "
-                f"The unsaved plays are the question underneath: but is it?"
-            ),
-        }
-
-    def _evolution_insight(self, p):
-        parts = []
-
-        if p.rising_artists:
-            rising = ", ".join(p.rising_artists[:5])
-            parts.append(f"Currently rising: {rising}.")
-
-        if p.falling_artists:
-            falling = ", ".join(p.falling_artists[:5])
-            parts.append(f"Cooling off: {falling}.")
-
-        if p.alltime_recency > 60:
-            parts.append(
-                f"{p.alltime_recency:.0f}% of {p.user}'s all-time most played tracks were saved "
-                f"in the last year. The music is more alive right now than it has ever been. "
-                f"This isn't someone settling into a lane - this is someone accelerating."
-            )
-
-        if not parts:
-            return None
-
-        return {"type": "evolution", "title": "Where it's heading", "body": " ".join(parts)}
-
-    # --- Relationship narrative blocks ---
-
     def _connection_insight(self, r):
         overlap = r.artist_jaccard * 100
         shared_count = len(r.shared_artists)
+        total_union = len(r.a.artist_set | r.b.artist_set)
 
-        if overlap > 30:
+        if overlap > 40:
+            vibe = "practically the same person"
+            desc = self._v([
+                (f"{shared_count} shared artists out of {total_union} total — "
+                 f"a {overlap:.0f}% overlap. These libraries grew up together."),
+                (f"A {overlap:.0f}% artist overlap. {shared_count} artists in common. "
+                 f"At this level, they're sharing a musical nervous system."),
+            ], r.a.user, "conn")
+        elif overlap > 30:
             vibe = "deeply intertwined"
-            desc = f"musical siblings - {shared_count} shared artists, a {overlap:.0f}% overlap"
-        elif overlap > 15:
+            desc = (f"musical siblings — {shared_count} shared artists, "
+                    f"a {overlap:.0f}% overlap. They could swap playlists and feel at home.")
+        elif overlap > 20:
             vibe = "significantly connected"
-            desc = f"{shared_count} artists in common, enough shared ground to build on"
+            desc = self._v([
+                (f"{shared_count} artists in common ({overlap:.0f}% overlap). "
+                 f"Solid shared ground — they could trade recommendations all day."),
+                (f"A {overlap:.0f}% overlap across {shared_count} artists. "
+                 f"They speak the same musical language, "
+                 f"even if they say different things with it."),
+            ], r.a.user, "conn")
+        elif overlap > 10:
+            vibe = "connected"
+            desc = self._v([
+                (f"{shared_count} artists in common ({overlap:.0f}% overlap). "
+                 f"Enough to bond over, enough difference to keep it interesting."),
+                (f"A {overlap:.0f}% overlap — {shared_count} shared artists. "
+                 f"Not twins, but they share enough DNA to understand each other."),
+            ], r.a.user, "conn")
         elif overlap > 5:
             vibe = "complementary"
-            desc = f"only {shared_count} shared artists, but that's where it gets interesting"
+            desc = self._v([
+                (f"Only {shared_count} shared artists ({overlap:.0f}%). "
+                 f"Different worlds, but the edges touch — "
+                 f"that's where the interesting part is."),
+                (f"{overlap:.0f}% overlap — just {shared_count} artists in common. "
+                 f"More different than alike, which means more to offer each other."),
+            ], r.a.user, "conn")
         else:
-            vibe = "from different planets"
-            desc = f"just {shared_count} artists in common - two completely different musical worlds"
+            vibe = "from different universes"
+            desc = self._v([
+                (f"Just {shared_count} artists in common ({overlap:.0f}%). "
+                 f"Two completely different musical worlds. "
+                 f"The value here is in the distance between them."),
+                (f"{overlap:.0f}% overlap. {shared_count} shared artists out of {total_union}. "
+                 f"These libraries are perpendicular — "
+                 f"everything one offers is new to the other."),
+            ], r.a.user, "conn")
 
         return {
             "type": "connection",
             "title": f"{r.a.user} and {r.b.user}: {vibe}",
             "body": (
-                f"These two libraries are {vibe}. {desc}. "
+                f"These two libraries are {vibe}. {desc} "
                 f"{r.a.user} has {r.a.total:,} tracks across {r.a.unique_artists:,} artists. "
                 f"{r.b.user} has {r.b.total:,} tracks across {r.b.unique_artists:,} artists."
             ),
@@ -915,20 +1398,32 @@ class NarrativeEngine:
         top_shared = r.shared_ranked[:8]
         names = [s["name"] for s in top_shared]
 
-        parts = [f"The shared ground: {', '.join(names)}."]
+        parts = [self._v([
+            f"The shared ground: {', '.join(names)}.",
+            f"Where they meet: {', '.join(names)}.",
+            f"Common territory: {', '.join(names)}.",
+        ], r.a.user, "shared")]
 
         # Interesting rank divergences
         if r.rank_divergences:
             div = r.rank_divergences[0]
-            parts.append(
-                f"But shared doesn't mean same. {div['name']} is #{div['a_rank']} for {r.a.user} "
-                f"and #{div['b_rank']} for {r.b.user}. "
-                f"Same artist, different weight. They hear the same music but it means different things."
-            )
+            parts.append(self._v([
+                (f"But shared doesn't mean same. {div['name']} is #{div['a_rank']} "
+                 f"for {r.a.user} and #{div['b_rank']} for {r.b.user}. "
+                 f"Same artist, different weight — "
+                 f"they hear the same music but it means different things."),
+                (f"Shared artists hit differently. {div['name']}: "
+                 f"#{div['a_rank']} for {r.a.user}, #{div['b_rank']} for {r.b.user}. "
+                 f"Same sound, different place in the story."),
+            ], r.a.user, "div"))
 
         if r.shared_current_artists:
             current = ", ".join(list(r.shared_current_artists)[:5])
-            parts.append(f"Right now they're both listening to: {current}.")
+            parts.append(self._v([
+                f"Right now they're both listening to: {current}.",
+                f"Currently overlapping on: {current}.",
+                f"In real time, they're both in: {current}.",
+            ], r.a.user, "curr"))
 
         return {"type": "shared", "title": "Common ground", "body": " ".join(parts)}
 
@@ -937,46 +1432,86 @@ class NarrativeEngine:
         tensions = []
 
         if r.both_low_anger:
-            alignments.append("Neither library has much anger in it - both process through beauty, not confrontation.")
+            alignments.append(self._v([
+                "Neither library carries much anger — both process through beauty, not confrontation.",
+                "Low aggression on both sides. These two share a soft emotional palette.",
+                "Both libraries lean gentle — almost no rage in either collection.",
+            ], r.a.user, "anger"))
 
         if r.both_explorers:
-            alignments.append("Both are wide explorers - high one-track artist ratios, always moving to the next thing.")
+            alignments.append(self._v([
+                (f"Both wide explorers — {r.a.user} at {r.a.one_track_pct:.0f}% one-track artists, "
+                 f"{r.b.user} at {r.b.one_track_pct:.0f}%. Always moving to the next thing."),
+                "Both restless samplers with high one-track artist ratios. "
+                "Neither stays long — they bond over the chase, not the catch.",
+            ], r.a.user, "expl"))
         elif r.both_loyalists:
-            alignments.append("Both are deep divers - they go all in on artists they love.")
+            alignments.append(self._v([
+                (f"Both deep divers — {r.a.user} at {r.a.top10_loyalty:.0f}% top-10 loyalty, "
+                 f"{r.b.user} at {r.b.top10_loyalty:.0f}%. They go all in on what they love."),
+                "Both concentrate their libraries around a core few artists. "
+                "Loyalty as a shared language.",
+            ], r.a.user, "loy"))
         elif r.loyalty_diff > 20:
+            explorer = r.a.user if r.a.one_track_pct > r.b.one_track_pct else r.b.user
+            devotee = r.b.user if explorer == r.a.user else r.a.user
             tensions.append(
-                f"{r.a.user} is {'a deep diver' if r.a.top10_loyalty > r.b.top10_loyalty else 'an explorer'} "
-                f"while {r.b.user} is {'a deep diver' if r.b.top10_loyalty > r.a.top10_loyalty else 'an explorer'}. "
-                f"One goes deep, the other goes wide. That's complementary."
+                f"{explorer} explores widely while {devotee} goes deep. "
+                f"One maps the territory, the other builds a home in it."
             )
 
         if r.same_home_decade:
-            alignments.append(f"Same home decade: {r.a.home_decade}. They grew up in the same musical era.")
+            alignments.append(self._v([
+                f"Same home decade: {r.a.home_decade}. They grew up in the same musical era.",
+                f"Both rooted in the {r.a.home_decade}. A shared sonic foundation.",
+            ], r.a.user, "decade"))
         else:
-            tensions.append(
-                f"Different home decades - {r.a.user} lives in the {r.a.home_decade}, "
-                f"{r.b.user} in the {r.b.home_decade}. They carry different eras inside them."
-            )
+            tensions.append(self._v([
+                (f"Different home decades — {r.a.user} in the {r.a.home_decade}, "
+                 f"{r.b.user} in the {r.b.home_decade}. "
+                 f"They carry different eras inside them."),
+                (f"{r.a.user} lives in the {r.a.home_decade}, "
+                 f"{r.b.user} in the {r.b.home_decade}. "
+                 f"Different soundtracks for different timelines."),
+            ], r.a.user, "decade"))
 
         if r.both_nostalgic:
-            alignments.append("Both reach deep into the past - fellow archivists.")
+            alignments.append(self._v([
+                (f"Both reach deep into the past — "
+                 f"{r.a.user} averages {r.a.current_nostalgia:.0f} years back, "
+                 f"{r.b.user} {r.b.current_nostalgia:.0f}. Fellow archivists."),
+                "Both pull from deep wells. They share a belief that the good stuff "
+                "isn't all happening right now.",
+            ], r.a.user, "nost"))
         elif r.nostalgia_diff > 8:
             who_past = r.a.user if r.a.current_nostalgia > r.b.current_nostalgia else r.b.user
             who_present = r.b.user if who_past == r.a.user else r.a.user
+            past_val = max(r.a.current_nostalgia, r.b.current_nostalgia)
+            present_val = min(r.a.current_nostalgia, r.b.current_nostalgia)
             tensions.append(
-                f"{who_past} listens {max(r.a.current_nostalgia, r.b.current_nostalgia):.0f} years behind the present. "
-                f"{who_present} stays closer to now. One is an archaeologist, the other is a reporter."
+                f"{who_past} listens {past_val:.0f} years behind the present. "
+                f"{who_present} stays closer to now ({present_val:.0f} years back). "
+                f"One is an archaeologist, the other a reporter."
             )
 
         if r.explicit_diff > 15:
             who_explicit = r.a.user if r.a.explicit_pct > r.b.explicit_pct else r.b.user
-            tensions.append(f"{who_explicit} runs rawer - significantly more explicit content.")
+            who_clean = r.b.user if who_explicit == r.a.user else r.a.user
+            tensions.append(
+                f"{who_explicit} runs rawer ({max(r.a.explicit_pct, r.b.explicit_pct):.0f}% explicit) "
+                f"while {who_clean} keeps it cleaner ({min(r.a.explicit_pct, r.b.explicit_pct):.0f}%). "
+                f"Different comfort zones with unfiltered expression."
+            )
 
         if r.both_accelerating:
-            alignments.append(
-                "Both are musically accelerating - their all-time most played lists "
-                "are dominated by recent discoveries. They're both more alive right now than ever."
-            )
+            alignments.append(self._v([
+                (f"Both musically accelerating — their all-time favorites are dominated "
+                 f"by recent discoveries ({r.a.user}: {r.a.alltime_recency:.0f}%, "
+                 f"{r.b.user}: {r.b.alltime_recency:.0f}%). "
+                 f"Both more alive right now than ever."),
+                "Both in a phase of musical acceleration. Their heaviest-played tracks "
+                "are mostly recent saves — they're both rewriting their identity in real time.",
+            ], r.a.user, "accel"))
 
         body_parts = []
         if alignments:
@@ -994,25 +1529,38 @@ class NarrativeEngine:
 
         if r.a_gifts:
             gifts = ", ".join(g["name"] for g in r.a_gifts[:5])
-            parts.append(
-                f"{r.a.user} could open these doors for {r.b.user}: {gifts}."
-            )
+            top_gift = r.a_gifts[0]
+            parts.append(self._v([
+                (f"{r.a.user} could open these doors for {r.b.user}: {gifts}. "
+                 f"{top_gift['name']} alone has {top_gift['count']} tracks — "
+                 f"a deep well {r.b.user} hasn't tapped."),
+                f"{r.a.user} could introduce {r.b.user} to: {gifts}.",
+                (f"What {r.a.user} has that {r.b.user} doesn't: {gifts}. "
+                 f"Starting with {top_gift['name']} ({top_gift['count']} tracks)."),
+            ], r.a.user, "gift"))
 
         if r.b_gifts:
             gifts = ", ".join(g["name"] for g in r.b_gifts[:5])
-            parts.append(
-                f"{r.b.user} could open these doors for {r.a.user}: {gifts}."
-            )
+            top_gift = r.b_gifts[0]
+            parts.append(self._v([
+                (f"{r.b.user} could open these doors for {r.a.user}: {gifts}. "
+                 f"{top_gift['name']} leads with {top_gift['count']} tracks."),
+                f"{r.b.user} could introduce {r.a.user} to: {gifts}.",
+                (f"What {r.b.user} has that {r.a.user} doesn't: {gifts}. "
+                 f"{top_gift['name']} ({top_gift['count']} tracks) is the starting point."),
+            ], r.b.user, "gift"))
 
         if r.a_unique_decades:
+            decades_str = ", ".join(sorted(r.a_unique_decades))
             parts.append(
-                f"{r.a.user} has explored the {', '.join(sorted(r.a_unique_decades))} "
+                f"{r.a.user} has explored the {decades_str} "
                 f"that {r.b.user} hasn't touched."
             )
 
         if r.b_unique_decades:
+            decades_str = ", ".join(sorted(r.b_unique_decades))
             parts.append(
-                f"{r.b.user} has explored the {', '.join(sorted(r.b_unique_decades))} "
+                f"{r.b.user} has explored the {decades_str} "
                 f"that {r.a.user} hasn't touched."
             )
 
@@ -1033,24 +1581,32 @@ class NarrativeEngine:
 
         if r.shared_unsaved_artists:
             shared = ", ".join(list(r.shared_unsaved_artists)[:5])
-            parts.append(
-                f"They share unsaved obsessions: both play {shared} on repeat without saving. "
-                f"Their shadow selves overlap - the things they need but won't claim are the same things."
-            )
+            parts.append(self._v([
+                (f"They share unsaved obsessions: both play {shared} on repeat without saving. "
+                 f"Their shadow selves overlap — the things they need but won't claim are the same."),
+                (f"Both circle {shared} without committing. "
+                 f"A shared shadow — music they both need but neither will save."),
+            ], r.a.user, "shadow"))
 
         if r.a_unsaved_in_b_saved:
             crossover = ", ".join(list(r.a_unsaved_in_b_saved)[:3])
-            parts.append(
-                f"What {r.a.user} plays but won't save, {r.b.user} has already claimed: {crossover}. "
-                f"{r.b.user} has integrated something {r.a.user} is still circling."
-            )
+            parts.append(self._v([
+                (f"What {r.a.user} plays but won't save, "
+                 f"{r.b.user} has already claimed: {crossover}. "
+                 f"{r.b.user} has integrated something {r.a.user} is still circling."),
+                (f"{r.a.user} keeps playing {crossover} without saving. "
+                 f"{r.b.user} saved them long ago. "
+                 f"What one resists, the other has embraced."),
+            ], r.a.user, "cross"))
 
         if r.b_unsaved_in_a_saved:
             crossover = ", ".join(list(r.b_unsaved_in_a_saved)[:3])
-            parts.append(
-                f"And the reverse: {r.b.user}'s unsaved obsessions include {crossover}, "
-                f"which {r.a.user} saved long ago."
-            )
+            parts.append(self._v([
+                (f"The reverse: {r.b.user}'s unsaved obsessions include {crossover}, "
+                 f"which {r.a.user} saved long ago."),
+                (f"And {r.b.user} circles {crossover} without saving — "
+                 f"artists {r.a.user} committed to already."),
+            ], r.b.user, "cross"))
 
         if not parts:
             return None
@@ -1058,46 +1614,59 @@ class NarrativeEngine:
         return {"type": "shadow", "title": "The shadow selves", "body": " ".join(parts)}
 
     def _dynamic_insight(self, r):
-        # Determine the relational dynamic
         a_bigger = r.a.total > r.b.total * 1.5
         b_bigger = r.b.total > r.a.total * 1.5
-        a_older = r.a.library_span_days > r.b.library_span_days * 1.3
-        b_older = r.b.library_span_days > r.a.library_span_days * 1.3
         a_more_diverse = r.a.unique_artists > r.b.unique_artists * 1.3
         b_more_diverse = r.b.unique_artists > r.a.unique_artists * 1.3
+        size_ratio = max(r.a.total, r.b.total) / max(min(r.a.total, r.b.total), 1)
 
         if a_bigger and a_more_diverse:
             return {
                 "type": "dynamic",
                 "title": "The dynamic",
-                "body": (
-                    f"{r.a.user}'s library is significantly larger and more diverse. "
-                    f"In this relationship, {r.a.user} is probably the one sending songs, "
-                    f"making playlists, saying 'you HAVE to hear this.' "
-                    f"{r.b.user} is more focused - fewer tracks but potentially deeper attachment to each one."
-                ),
+                "body": self._v([
+                    (f"{r.a.user}'s library is {size_ratio:.1f}x larger and spans "
+                     f"{r.a.unique_artists:,} artists to {r.b.user}'s {r.b.unique_artists:,}. "
+                     f"In this relationship, {r.a.user} is probably the one always sending songs, "
+                     f"making playlists, saying 'you have to hear this.' "
+                     f"{r.b.user} is more selective — fewer tracks, "
+                     f"potentially deeper attachment to each one."),
+                    (f"{r.a.total:,} tracks vs {r.b.total:,}. "
+                     f"{r.a.unique_artists:,} artists vs {r.b.unique_artists:,}. "
+                     f"{r.a.user} casts a wider net — the curator, the DJ. "
+                     f"{r.b.user} is more deliberate — each save carries more weight."),
+                ], r.a.user, "dyn"),
             }
         elif b_bigger and b_more_diverse:
             return {
                 "type": "dynamic",
                 "title": "The dynamic",
-                "body": (
-                    f"{r.b.user}'s library is significantly larger and more diverse. "
-                    f"In this relationship, {r.b.user} is probably the curator, the DJ, "
-                    f"the one always finding something new. "
-                    f"{r.a.user} is more selective - each save means more."
-                ),
+                "body": self._v([
+                    (f"{r.b.user}'s library is {size_ratio:.1f}x larger and spans "
+                     f"{r.b.unique_artists:,} artists to {r.a.user}'s {r.a.unique_artists:,}. "
+                     f"{r.b.user} is probably the curator in this relationship — "
+                     f"the one always finding something new. "
+                     f"{r.a.user} is more selective — each save means more."),
+                    (f"{r.b.total:,} tracks vs {r.a.total:,}. "
+                     f"{r.b.unique_artists:,} artists vs {r.a.unique_artists:,}. "
+                     f"{r.b.user} is the one with the bigger map. "
+                     f"{r.a.user} travels lighter but knows their territory deeply."),
+                ], r.b.user, "dyn"),
             }
         else:
             return {
                 "type": "dynamic",
                 "title": "The dynamic",
-                "body": (
-                    f"Similar sized libraries ({r.a.total:,} vs {r.b.total:,}). "
-                    f"Neither is leading the other musically - "
-                    f"they're parallel explorers, each on their own path, "
-                    f"crossing at the shared artists and diverging into their own territories."
-                ),
+                "body": self._v([
+                    (f"Similar-sized libraries ({r.a.total:,} vs {r.b.total:,} tracks, "
+                     f"{r.a.unique_artists:,} vs {r.b.unique_artists:,} artists). "
+                     f"Neither is leading the other musically — "
+                     f"parallel explorers on their own paths, "
+                     f"crossing at the shared artists and diverging into their own territories."),
+                    (f"{r.a.total:,} tracks meets {r.b.total:,}. "
+                     f"Roughly balanced. Neither is the DJ or the passenger — "
+                     f"they navigate independently and compare notes."),
+                ], r.a.user, "dyn"),
             }
 
     def _trajectory_insight(self, r):
@@ -1105,28 +1674,44 @@ class NarrativeEngine:
 
         if r.converging:
             shared = ", ".join(list(r.shared_rising)[:4])
-            parts.append(
-                f"They're converging. Both are currently getting into: {shared}. "
-                f"Their tastes are moving toward each other right now."
-            )
+            parts.append(self._v([
+                (f"They're converging. Both currently getting into: {shared}. "
+                 f"Their tastes are moving toward each other."),
+                (f"Converging trajectories. Both are discovering: {shared}. "
+                 f"Whatever algorithm or instinct is guiding them, "
+                 f"it's pulling them to the same place."),
+            ], r.a.user, "traj"))
         elif r.a.rising_artists and r.b.rising_artists:
-            parts.append(
-                f"They're on different trajectories. "
-                f"{r.a.user} is moving toward: {', '.join(r.a.rising_artists[:3])}. "
-                f"{r.b.user} is moving toward: {', '.join(r.b.rising_artists[:3])}. "
-                f"Parallel paths - not converging, not diverging, just different."
-            )
+            parts.append(self._v([
+                (f"Different trajectories. "
+                 f"{r.a.user} is moving toward: {', '.join(r.a.rising_artists[:3])}. "
+                 f"{r.b.user} is moving toward: {', '.join(r.b.rising_artists[:3])}. "
+                 f"Parallel paths — not converging, not diverging."),
+                (f"{r.a.user}'s current direction: {', '.join(r.a.rising_artists[:3])}. "
+                 f"{r.b.user}'s: {', '.join(r.b.rising_artists[:3])}. "
+                 f"They're headed to different places from here."),
+                (f"Right now {r.a.user} is discovering {', '.join(r.a.rising_artists[:3])}, "
+                 f"while {r.b.user} is into {', '.join(r.b.rising_artists[:3])}. "
+                 f"Different vectors — each could become the other's next recommendation."),
+            ], r.a.user, "traj"))
 
         if r.nostalgia_trend_same and r.a.nostalgia_trend > 3:
-            parts.append("Both are reaching further into the past every year. Fellow time travelers.")
-        elif not r.nostalgia_trend_same:
+            parts.append(self._v([
+                "Both reaching further into the past each year. Fellow time travelers.",
+                "Both on the same backward trajectory — digging deeper every year. "
+                "They'll keep finding older music to share.",
+            ], r.a.user, "nost_traj"))
+        elif not r.nostalgia_trend_same and abs(r.a.nostalgia_trend - r.b.nostalgia_trend) > 5:
             who_past = r.a.user if r.a.nostalgia_trend > r.b.nostalgia_trend else r.b.user
             who_present = r.b.user if who_past == r.a.user else r.a.user
-            parts.append(
-                f"{who_past} is heading deeper into the past. "
-                f"{who_present} is staying closer to the present. "
-                f"In five years, their libraries will look more different than they do now."
-            )
+            parts.append(self._v([
+                (f"{who_past} is heading deeper into the past while "
+                 f"{who_present} stays closer to the present. "
+                 f"Their libraries will look more different over time."),
+                (f"Diverging timelines: {who_past} keeps excavating older music, "
+                 f"{who_present} stays current. "
+                 f"The gap between their decades will widen."),
+            ], r.a.user, "nost_traj"))
 
         if not parts:
             return None
