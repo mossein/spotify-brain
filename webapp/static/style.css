@@ -109,11 +109,10 @@ body {
 }
 
 .landing-brand {
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 4px;
-    text-transform: uppercase;
-    color: var(--text-dim);
+    font-family: var(--serif);
+    font-size: 18px;
+    font-style: italic;
+    color: var(--warm);
     margin-bottom: 48px;
     animation: fadeIn 1s ease forwards;
 }
@@ -227,13 +226,12 @@ body {
 }
 
 .nav-brand {
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    color: var(--text-dim);
+    font-family: var(--serif);
+    font-size: 16px;
+    font-style: italic;
+    color: var(--warm);
     text-decoration: none;
-    transition: color 0.3s;
+    transition: opacity 0.3s;
     display: flex;
     align-items: center;
     gap: 8px;

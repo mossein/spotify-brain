@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ reading.person_a.user }} & {{ reading.person_b.user }} - spotify-brain</title>
+    <title>{{ reading.person_a.user }} & {{ reading.person_b.user }} - Auracle</title>
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
@@ -113,7 +113,7 @@
 </head>
 <body>
     <nav class="nav">
-        <a href="/" class="nav-brand"><img src="{{ url_for('static', filename='logo.svg') }}" alt="">spotify-brain</a>
+        <a href="/" class="nav-brand"><img src="{{ url_for('static', filename='logo.svg') }}" alt="">Auracle</a>
         <div class="nav-links">
             <a href="{{ url_for('profile') }}">my reading</a>
             <a href="{{ url_for('logout') }}">logout</a>

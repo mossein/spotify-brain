@@ -1,39 +1,33 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
   <defs>
-    <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#e8c47c"/>
-      <stop offset="100%" stop-color="#c4956c"/>
+      <stop offset="100%" stop-color="#d4a055"/>
     </linearGradient>
   </defs>
 
-  <!-- A minimal abstract mark: overlapping circles suggesting two libraries meeting -->
-  <!-- Left arc (person A) -->
-  <path d="M 38 28 A 26 26 0 0 0 38 72" fill="none" stroke="url(#g1)" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+  <!-- Two overlapping circles (two people's libraries) -->
+  <!-- Left circle -->
+  <circle cx="40" cy="50" r="24" fill="none" stroke="#e8c47c" stroke-width="1.8" opacity="0.6"/>
 
-  <!-- Right arc (person B) -->
-  <path d="M 62 28 A 26 26 0 0 1 62 72" fill="none" stroke="url(#g1)" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+  <!-- Right circle -->
+  <circle cx="60" cy="50" r="24" fill="none" stroke="#e8c47c" stroke-width="1.8" opacity="0.6"/>
 
-  <!-- The intersection point - where two people's music meets -->
-  <circle cx="50" cy="50" r="4" fill="url(#g1)" opacity="0.9"/>
+  <!-- The vesica piscis / overlap zone highlighted -->
+  <clipPath id="clipLeft">
+    <circle cx="40" cy="50" r="24"/>
+  </clipPath>
+  <clipPath id="clipRight">
+    <circle cx="60" cy="50" r="24"/>
+  </clipPath>
 
-  <!-- Constellation dots along the arcs -->
-  <circle cx="38" cy="28" r="1.5" fill="#e8c47c" opacity="0.5"/>
-  <circle cx="30" cy="40" r="1" fill="#e8c47c" opacity="0.35"/>
-  <circle cx="29" cy="50" r="1.5" fill="#e8c47c" opacity="0.4"/>
-  <circle cx="30" cy="60" r="1" fill="#e8c47c" opacity="0.35"/>
-  <circle cx="38" cy="72" r="1.5" fill="#e8c47c" opacity="0.5"/>
+  <!-- Fill only the intersection -->
+  <circle cx="60" cy="50" r="24" fill="#e8c47c" opacity="0.12" clip-path="url(#clipLeft)"/>
 
-  <circle cx="62" cy="28" r="1.5" fill="#e8c47c" opacity="0.5"/>
-  <circle cx="70" cy="40" r="1" fill="#e8c47c" opacity="0.35"/>
-  <circle cx="71" cy="50" r="1.5" fill="#e8c47c" opacity="0.4"/>
-  <circle cx="70" cy="60" r="1" fill="#e8c47c" opacity="0.35"/>
-  <circle cx="62" cy="72" r="1.5" fill="#e8c47c" opacity="0.5"/>
-
-  <!-- Faint connecting lines through center - data threads -->
-  <line x1="38" y1="28" x2="50" y2="50" stroke="#e8c47c" stroke-width="0.5" opacity="0.15"/>
-  <line x1="62" y1="28" x2="50" y2="50" stroke="#e8c47c" stroke-width="0.5" opacity="0.15"/>
-  <line x1="38" y1="72" x2="50" y2="50" stroke="#e8c47c" stroke-width="0.5" opacity="0.15"/>
-  <line x1="62" y1="72" x2="50" y2="50" stroke="#e8c47c" stroke-width="0.5" opacity="0.15"/>
-  <line x1="29" y1="50" x2="50" y2="50" stroke="#e8c47c" stroke-width="0.5" opacity="0.1"/>
-  <line x1="71" y1="50" x2="50" y2="50" stroke="#e8c47c" stroke-width="0.5" opacity="0.1"/>
+  <!-- Sound wave / EQ bars inside the intersection -->
+  <g opacity="0.8">
+    <rect x="46" y="44" width="2" height="12" rx="1" fill="url(#g)"/>
+    <rect x="50" y="40" width="2" height="20" rx="1" fill="url(#g)"/>
+    <rect x="54" y="42" width="2" height="16" rx="1" fill="url(#g)"/>
+  </g>
 </svg>
