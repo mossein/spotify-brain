@@ -377,8 +377,27 @@ def callback():
         return "Failed to get access token", 400
 
     session["access_token"] = access_token
+    session["loading"] = True
 
-    # Pull library
+    # Show loading page - processing happens on the status poll
+    return render_template("loading.html")
+
+
+@app.route("/loading-status")
+def loading_status():
+    access_token = session.get("access_token")
+    if not access_token:
+        return jsonify({"ready": False})
+
+    # Check if already processed
+    if not session.get("loading"):
+        user_id = session.get("user_id")
+        pair_with = session.get("pair_with")
+        if pair_with and user_id and pair_with != user_id:
+            return jsonify({"ready": True, "redirect": url_for("together", user_a=user_id, user_b=pair_with)})
+        return jsonify({"ready": True, "redirect": url_for("profile")})
+
+    # Do the actual work
     user_id, display_name, library_data = pull_library(access_token)
 
     # Generate insights
@@ -402,14 +421,15 @@ def callback():
 
     session["user_id"] = user_id
     session["display_name"] = display_name
+    session.pop("loading", None)
 
     # Check if they came from a pair link
     pair_with = session.pop("pair_with", None)
     if pair_with and pair_with != user_id:
         _create_pairing(user_id, pair_with)
-        return redirect(url_for("together", user_a=user_id, user_b=pair_with))
+        return jsonify({"ready": True, "redirect": url_for("together", user_a=user_id, user_b=pair_with)})
 
-    return redirect(url_for("profile"))
+    return jsonify({"ready": True, "redirect": url_for("profile")})
 
 
 @app.route("/profile")

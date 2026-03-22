@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Reading your library... - Auracle</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .loading-page {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 40px 24px;
+        }
+
+        .loading-logo {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 48px;
+            animation: pulse-slow 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-slow {
+            0%, 100% { opacity: 0.4; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.05); }
+        }
+
+        .loading-title {
+            font-family: var(--serif);
+            font-size: 1.8em;
+            font-style: italic;
+            color: var(--accent);
+            margin-bottom: 16px;
+        }
+
+        .loading-status {
+            font-size: 0.9em;
+            color: var(--text-dim);
+            font-weight: 300;
+            margin-bottom: 48px;
+        }
+
+        .loading-steps {
+            max-width: 280px;
+            text-align: left;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+            color: var(--text-dim);
+            font-size: 0.85em;
+            transition: color 0.5s;
+        }
+
+        .step.active {
+            color: var(--text);
+        }
+
+        .step.done {
+            color: var(--warm);
+        }
+
+        .step-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-dim);
+            flex-shrink: 0;
+            transition: all 0.5s;
+        }
+
+        .step.active .step-dot {
+            background: var(--accent);
+            box-shadow: 0 0 8px rgba(255,255,255,0.3);
+            animation: pulse-dot 1.5s ease-in-out infinite;
+        }
+
+        .step.done .step-dot {
+            background: var(--warm);
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        .loading-quote {
+            margin-top: 64px;
+            max-width: 360px;
+            font-family: var(--serif);
+            font-style: italic;
+            font-size: 0.95em;
+            color: var(--text-dim);
+            line-height: 1.7;
+            opacity: 0;
+            animation: fadeIn 1s 2s ease forwards;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-page">
+        <img src="{{ url_for('static', filename='logo.svg') }}" class="loading-logo" alt="">
+
+        <div class="loading-title">Reading your library</div>
+        <div class="loading-status">This takes about a minute</div>
+
+        <div class="loading-steps">
+            <div class="step active" id="step-tracks">
+                <span class="step-dot"></span>
+                Pulling saved tracks
+            </div>
+            <div class="step" id="step-top">
+                <span class="step-dot"></span>
+                Analyzing top artists and tracks
+            </div>
+            <div class="step" id="step-history">
+                <span class="step-dot"></span>
+                Reading listening history
+            </div>
+            <div class="step" id="step-reading">
+                <span class="step-dot"></span>
+                Generating your reading
+            </div>
+        </div>
+
+        <div class="loading-quote">
+            "The question you're always asking, the filter everything passes through: does this glow?"
+        </div>
+    </div>
+
+    <script>
+    // Animate steps while waiting
+    const steps = ['step-tracks', 'step-top', 'step-history', 'step-reading'];
+    let current = 0;
+
+    function advanceStep() {
+        if (current > 0) {
+            document.getElementById(steps[current - 1]).classList.remove('active');
+            document.getElementById(steps[current - 1]).classList.add('done');
+        }
+        if (current < steps.length) {
+            document.getElementById(steps[current]).classList.add('active');
+            current++;
+        }
+    }
+
+    // Simulate progress (the actual work happens server-side)
+    setTimeout(() => advanceStep(), 5000);
+    setTimeout(() => advanceStep(), 12000);
+    setTimeout(() => advanceStep(), 20000);
+
+    // Poll for completion
+    function checkReady() {
+        fetch('/loading-status')
+            .then(r => r.json())
+            .then(data => {
+                if (data.ready) {
+                    window.location.href = data.redirect;
+                } else {
+                    setTimeout(checkReady, 2000);
+                }
+            })
+            .catch(() => setTimeout(checkReady, 3000));
+    }
+
+    setTimeout(checkReady, 3000);
+    </script>
+</body>
+</html>

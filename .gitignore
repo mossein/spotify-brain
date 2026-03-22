@@ -3,3 +3,5 @@ __pycache__/
 library.txt
 *-library.json
 webapp/spotify_brain.db
+webapp/.env
+.env
