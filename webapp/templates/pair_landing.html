@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>spotify-brain</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="pair-landing">
+        <h1><span class="name">{{ other_name }}</span> wants a reading with you</h1>
+        <p>Sign in with Spotify and we'll read the space between your libraries.</p>
+        <a href="{{ url_for('login') }}" class="btn btn-spotify">Sign in with Spotify</a>
+    </div>
+</body>
+</html>

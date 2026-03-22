@@ -2,3 +2,4 @@ __pycache__/
 *.pyc
 library.txt
 *-library.json
+webapp/spotify_brain.db

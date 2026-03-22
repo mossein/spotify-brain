@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ reading.person_a.user }} & {{ reading.person_b.user }} - spotify-brain</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <nav class="nav">
+        <a href="/" class="nav-brand">spotify-brain</a>
+        <div class="nav-links">
+            <a href="{{ url_for('profile') }}">my reading</a>
+            <a href="{{ url_for('logout') }}">logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="together-header">
+            <h1>Relationship Reading</h1>
+            <div class="vs">
+                <span class="name">{{ reading.person_a.user }}</span>
+                &
+                <span class="name">{{ reading.person_b.user }}</span>
+            </div>
+        </div>
+
+        <!-- Relationship insights first - the main event -->
+        <div class="section-label relationship">The space between</div>
+        {% for insight in reading.relationship %}
+        <div class="insight">
+            <div class="insight-type">{{ insight.type }}</div>
+            <div class="insight-body">{{ insight.body }}</div>
+        </div>
+        {% endfor %}
+
+        <!-- Person A -->
+        <div class="section-label person-a">{{ reading.person_a.user }}</div>
+        {% for insight in reading.person_a.insights %}
+        <div class="insight">
+            <div class="insight-type">{{ insight.type }}</div>
+            <div class="insight-body">{{ insight.body }}</div>
+        </div>
+        {% endfor %}
+
+        <!-- Person B -->
+        <div class="section-label person-b">{{ reading.person_b.user }}</div>
+        {% for insight in reading.person_b.insights %}
+        <div class="insight">
+            <div class="insight-type">{{ insight.type }}</div>
+            <div class="insight-body">{{ insight.body }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</body>
+</html>

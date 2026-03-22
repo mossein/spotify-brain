@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ user.display_name }} - spotify-brain</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <nav class="nav">
+        <a href="/" class="nav-brand">spotify-brain</a>
+        <div class="nav-links">
+            <a href="{{ url_for('logout') }}">logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="profile-header">
+            <div>
+                <h1>{{ user.display_name }}</h1>
+                <div class="meta">{{ library.stats.total_saved }} tracks | {{ library.stats.unique_artists }} artists</div>
+            </div>
+        </div>
+
+        {% for insight in insights %}
+        <div class="insight">
+            <div class="insight-type">{{ insight.type }}</div>
+            <div class="insight-title">{{ insight.title }}</div>
+            <div class="insight-body">{{ insight.body }}</div>
+        </div>
+        {% endfor %}
+
+        <div class="share-section">
+            <h2>Get a relationship reading</h2>
+            <p>Share this link with a friend. When they sign in, you'll both see a reading of the space between your libraries.</p>
+            <div class="share-url" onclick="copyLink(this)" title="Click to copy">{{ share_url }}</div>
+            <br>
+            <span class="copied" id="copied-msg">Copied!</span>
+        </div>
+
+        {% if pairings %}
+        <div class="pairings">
+            <h2>Your readings</h2>
+            {% for p in pairings %}
+            <a href="{{ url_for('together', user_a=p.user_a, user_b=p.user_b) }}" style="text-decoration: none;">
+                <div class="pairing-card">
+                    <div class="names">
+                        <span>{{ p.name_a }}</span> & <span>{{ p.name_b }}</span>
+                    </div>
+                    <div class="btn btn-small btn-share">View reading</div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+    function copyLink(el) {
+        navigator.clipboard.writeText(el.textContent.trim());
+        document.getElementById('copied-msg').style.display = 'inline';
+        setTimeout(() => {
+            document.getElementById('copied-msg').style.display = 'none';
+        }, 2000);
+    }
+    </script>
+</body>
+</html>
