@@ -77,6 +77,58 @@ init_db()
 # Visual data computation
 # ---------------------------------------------------------------------------
 
+def _render_radar_svg(library):
+    """Generate an SVG radar chart from library data."""
+    import math
+    profile = LibraryProfile(library)
+    radar = getattr(profile, 'radar', {})
+    if not radar:
+        return ""
+
+    keys = ['nocturnal', 'exploration', 'nostalgia', 'shadow', 'patience', 'loyalty', 'acceleration', 'rawness']
+    labels = ['NIGHT', 'EXPLORE', 'PAST', 'SHADOW', 'PATIENCE', 'LOYAL', 'MOMENTUM', 'RAW']
+    n = len(keys)
+    cx, cy, max_r = 150, 150, 110
+
+    def point(i, r):
+        angle = (2 * math.pi * i / n) - math.pi / 2
+        return cx + r * math.cos(angle), cy + r * math.sin(angle)
+
+    lines = ['<svg viewBox="0 0 300 300" width="280" height="280" style="margin: 0 auto; display: block;">']
+
+    # Background rings
+    for r in [40, 80, 120]:
+        lines.append(f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>')
+
+    # Axis lines
+    for i in range(n):
+        x, y = point(i, 120)
+        lines.append(f'<line x1="{cx}" y1="{cy}" x2="{x:.1f}" y2="{y:.1f}" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>')
+
+    # Data polygon
+    pts = []
+    for i, key in enumerate(keys):
+        val = radar.get(key, 0.3)
+        x, y = point(i, val * max_r)
+        pts.append(f"{x:.1f},{y:.1f}")
+    lines.append(f'<polygon points="{" ".join(pts)}" fill="rgba(232,196,124,0.1)" stroke="rgba(232,196,124,0.6)" stroke-width="1.5"/>')
+
+    # Data points
+    for i, key in enumerate(keys):
+        val = radar.get(key, 0.3)
+        x, y = point(i, val * max_r)
+        lines.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="3" fill="#e8c47c"/>')
+
+    # Labels
+    for i, label in enumerate(labels):
+        x, y = point(i, 140)
+        lines.append(f'<text x="{x:.1f}" y="{y:.1f}" text-anchor="middle" dominant-baseline="middle" '
+                     f'fill="rgba(255,255,255,0.25)" font-family="monospace" font-size="7" letter-spacing="1.5">{label}</text>')
+
+    lines.append('</svg>')
+    return "\n".join(lines)
+
+
 def _compute_visuals(library):
     """Compute data for frontend visualizations."""
     saved = library.get("saved_tracks", [])
@@ -101,8 +153,14 @@ def _compute_visuals(library):
     unique = stats.get("unique_artists", 0)
     explicit_pct = stats.get("explicit_pct", 0)
 
-    # Unsaved count
-    unsaved = len([t for t in top_long if not t.get("saved", True)])
+    # Unsaved count - check all time ranges and deduplicate
+    all_top = {}
+    for tr in ["short_term", "medium_term", "long_term"]:
+        for t in library.get("top_tracks", {}).get(tr, []):
+            key = f"{t.get('artists', '')}|{t.get('name', '')}"
+            if key not in all_top:
+                all_top[key] = t
+    unsaved = len([t for t in all_top.values() if not t.get("saved", True)])
 
     # Library span
     dates = [t.get("added", "") for t in saved if t.get("added")]
@@ -122,6 +180,7 @@ def _compute_visuals(library):
     collab_pct = round(collab / max(total, 1) * 100)
 
     return {
+        "radar_svg": _render_radar_svg(library),
         "decades": decade_data,
         "monthly": monthly_vals,
         "top_artists": top_artists,
@@ -468,6 +527,12 @@ def together(user_a, user_b):
     vis_a = _compute_visuals(lib_a)
     vis_b = _compute_visuals(lib_b)
 
+    # Archetype data
+    profile_a = LibraryProfile(lib_a)
+    profile_b = LibraryProfile(lib_b)
+    arch_a = {"name": profile_a.archetype, "axes": profile_a.archetype_axes, "radar_svg": _render_radar_svg(lib_a)}
+    arch_b = {"name": profile_b.archetype, "axes": profile_b.archetype_axes, "radar_svg": _render_radar_svg(lib_b)}
+
     # Overlap stats
     artists_a = set(a.strip() for t in lib_a.get("saved_tracks", []) for a in t.get("artists", "").split(","))
     artists_b = set(a.strip() for t in lib_b.get("saved_tracks", []) for a in t.get("artists", "").split(","))
@@ -478,6 +543,8 @@ def together(user_a, user_b):
                           reading=reading,
                           user_a=ua,
                           user_b=ub,
+                          arch_a=arch_a,
+                          arch_b=arch_b,
                           vis_a=vis_a,
                           vis_b=vis_b,
                           overlap_pct=overlap_pct,

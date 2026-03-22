@@ -129,6 +129,20 @@
             </div>
         </div>
 
+        <!-- Archetype face-off -->
+        <div class="animate-in" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 48px;">
+            <div style="text-align: center; padding: 32px 0;">
+                <div style="font-family: var(--mono); font-size: 0.6em; letter-spacing: 3px; text-transform: uppercase; color: #64ffda; margin-bottom: 12px;">{{ reading.person_a.user }}</div>
+                <div style="font-family: var(--serif); font-size: 1.4em; font-style: italic; color: var(--accent); margin-bottom: 20px;">{{ arch_a.name }}</div>
+                {{ arch_a.radar_svg | safe }}
+            </div>
+            <div style="text-align: center; padding: 32px 0;">
+                <div style="font-family: var(--mono); font-size: 0.6em; letter-spacing: 3px; text-transform: uppercase; color: #ff6b9d; margin-bottom: 12px;">{{ reading.person_b.user }}</div>
+                <div style="font-family: var(--serif); font-size: 1.4em; font-style: italic; color: var(--accent); margin-bottom: 20px;">{{ arch_b.name }}</div>
+                {{ arch_b.radar_svg | safe }}
+            </div>
+        </div>
+
         <!-- Overlap visualization -->
         <div class="overlap-viz animate-in">
             <div class="venn">

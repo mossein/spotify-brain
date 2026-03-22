@@ -210,57 +210,7 @@
             <div style="font-size: 0.9em; color: var(--text-secondary); font-weight: 300; max-width: 400px; margin: 0 auto 32px;">{{ arch.body }}</div>
 
             <!-- Radar chart -->
-            {% if arch.radar %}
-            <svg viewBox="0 0 300 300" width="280" height="280" style="margin: 0 auto; display: block;">
-                <!-- Background rings -->
-                {% for r in [40, 80, 120] %}
-                <circle cx="150" cy="150" r="{{ r }}" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
-                {% endfor %}
-
-                <!-- Axis lines and labels -->
-                {% set axes = [
-                    ('nocturnal', 'NOCTURNAL', 150, 30),
-                    ('exploration', 'EXPLORER', 254, 79),
-                    ('nostalgia', 'NOSTALGIA', 278, 195),
-                    ('shadow', 'SHADOW', 212, 280),
-                    ('patience', 'PATIENCE', 88, 280),
-                    ('loyalty', 'LOYALTY', 22, 195),
-                    ('acceleration', 'MOMENTUM', 46, 79),
-                    ('rawness', 'RAWNESS', 150, 30),
-                ] %}
-                {% set radar_keys = ['nocturnal', 'exploration', 'nostalgia', 'shadow', 'patience', 'loyalty', 'acceleration', 'rawness'] %}
-                {% set n = 8 %}
-                {% set pi = 3.14159265 %}
-
-                <!-- Draw axis lines -->
-                {% for i in range(n) %}
-                {% set angle = (2 * pi * i / n) - pi/2 %}
-                {% set ex = 150 + 120 * (angle | cos if angle is defined else 1) %}
-                {% set ey = 150 + 120 * (angle | sin if angle is defined else 0) %}
-                <line x1="150" y1="150" x2="{{ 150 + 120 * [1, 0.707, 0, -0.707, -1, -0.707, 0, 0.707][i] }}" y2="{{ 150 + 120 * [-1, -0.707, 0, 0.707, 1, 0.707, 0, -0.707][i] | default(0) }}" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
-                {% endfor %}
-
-                <!-- Radar polygon -->
-                {% set coords = [] %}
-                {% set directions_x = [0, 0.707, 1, 0.707, 0, -0.707, -1, -0.707] %}
-                {% set directions_y = [-1, -0.707, 0, 0.707, 1, 0.707, 0, -0.707] %}
-                <polygon points="{% for key in radar_keys %}{% set val = arch.radar.get(key, 0.3) %}{% set i = loop.index0 %}{{ 150 + (val * 110) * directions_x[i] }},{{ 150 + (val * 110) * directions_y[i] }} {% endfor %}" fill="rgba(232,196,124,0.1)" stroke="rgba(232,196,124,0.6)" stroke-width="1.5"/>
-
-                <!-- Data points -->
-                {% for key in radar_keys %}
-                {% set val = arch.radar.get(key, 0.3) %}
-                {% set i = loop.index0 %}
-                <circle cx="{{ 150 + (val * 110) * directions_x[i] }}" cy="{{ 150 + (val * 110) * directions_y[i] }}" r="3" fill="var(--warm)"/>
-                {% endfor %}
-
-                <!-- Labels -->
-                {% set label_names = ['NIGHT', 'EXPLORE', 'PAST', 'SHADOW', 'PATIENCE', 'LOYAL', 'MOMENTUM', 'RAW'] %}
-                {% for label in label_names %}
-                {% set i = loop.index0 %}
-                <text x="{{ 150 + 140 * directions_x[i] }}" y="{{ 150 + 140 * directions_y[i] }}" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.25)" font-family="'JetBrains Mono', monospace" font-size="7" letter-spacing="1.5">{{ label }}</text>
-                {% endfor %}
-            </svg>
-            {% endif %}
+            {{ visuals.radar_svg | safe }}
         </div>
         {% endif %}
 
