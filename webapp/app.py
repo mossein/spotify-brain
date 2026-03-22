@@ -21,6 +21,11 @@ from flask import (Flask, redirect, request, render_template, session,
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from engine import LibraryProfile, RelationshipAnalysis, NarrativeEngine
 
+
+class SpotifyAuthError(Exception):
+    """Raised when a Spotify API call fails due to an expired/invalid token."""
+
+
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET", secrets.token_hex(32))
 
@@ -227,6 +232,9 @@ def spotify_api(token, endpoint, params=None):
     if resp.status_code == 429:
         time.sleep(int(resp.headers.get("Retry-After", 2)))
         return spotify_api(token, endpoint, params)
+    if resp.status_code == 401:
+        raise SpotifyAuthError("Spotify token expired or invalid")
+    resp.raise_for_status()
     return resp.json()
 
 
@@ -398,7 +406,11 @@ def loading_status():
         return jsonify({"ready": True, "redirect": url_for("profile")})
 
     # Do the actual work
-    user_id, display_name, library_data = pull_library(access_token)
+    try:
+        user_id, display_name, library_data = pull_library(access_token)
+    except SpotifyAuthError:
+        session.clear()
+        return jsonify({"ready": True, "redirect": url_for("login")})
 
     # Generate insights
     profile = LibraryProfile(library_data)
