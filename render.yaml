@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: auracle
+    runtime: python
+    rootDir: webapp
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    envVars:
+      - key: SPOTIFY_CLIENT_ID
+        sync: false
+      - key: SPOTIFY_CLIENT_SECRET
+        sync: false
+      - key: SPOTIFY_REDIRECT_URI
+        sync: false
+      - key: FLASK_SECRET
+        sync: false
+      - key: PYTHONPATH
+        value: /opt/render/project/src/webapp:/opt/render/project/src
