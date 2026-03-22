@@ -198,7 +198,7 @@
 
         {% for insight in reading.relationship %}
         <div class="insight animate-in">
-            <span class="insight-label">{{ insight.type }}</span>
+            <span class="insight-label">{{ insight.type | replace("_", " ") }}</span>
             {% if insight.title %}
             <div class="insight-title">{{ insight.title }}</div>
             {% endif %}
@@ -213,7 +213,7 @@
 
         {% for insight in reading.person_a.insights %}
         <div class="insight animate-in">
-            <span class="insight-label">{{ insight.type }}</span>
+            <span class="insight-label">{{ insight.type | replace("_", " ") }}</span>
             <div class="insight-title">{{ insight.title }}</div>
             <div class="insight-body">{{ insight.body }}</div>
         </div>
@@ -226,7 +226,7 @@
 
         {% for insight in reading.person_b.insights %}
         <div class="insight animate-in">
-            <span class="insight-label">{{ insight.type }}</span>
+            <span class="insight-label">{{ insight.type | replace("_", " ") }}</span>
             <div class="insight-title">{{ insight.title }}</div>
             <div class="insight-body">{{ insight.body }}</div>
         </div>
